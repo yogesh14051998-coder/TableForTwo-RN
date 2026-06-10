@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Table for 2",
+    "slug": "table-for-two",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "tablefortwo",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.tablefortwo.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0D0A13"
+      },
+      "package": "com.tablefortwo.app"
+    }
+  }
+}
