@@ -1,14 +1,17 @@
 import React from 'react';
-import { View, Text, ScrollView, Switch, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Switch, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T42, Fonts } from '../../theme/theme';
 import { SectionHeader, Card, GoldButton, MatchAvatar } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
-import { PAID_TIERS, TIER_INFO, type SubscriptionTier } from '../../models/types';
+import { PAID_TIERS, TIER_INFO, BACKGROUND_CHECK_FEE, type SubscriptionTier } from '../../models/types';
 
 export default function ProfileScreen() {
   const { state, setSubscription, setConsent } = useApp();
   const user = state.currentUser;
+
+  const bgLabel = user.backgroundCheck === 'clear' ? '✅ Verified'
+    : user.backgroundCheck === 'pending' ? '⏳ Pending' : '❌ Not started';
 
   return (
     <ScrollView style={s.root} contentContainerStyle={s.content}>
@@ -21,10 +24,38 @@ export default function ProfileScreen() {
               {user.firstName}, {user.age}
             </Text>
             <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-              {user.profession} · {user.city}
+              {user.profession} · {user.city || `Zip ${user.zipcode}`}
             </Text>
             <Text style={[Fonts.caption, { color: T42.gold, fontWeight: '600' }]}>
               Member tier: {state.subscription}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      {/* Details */}
+      <SectionHeader title="Your details" />
+      <Card>
+        <DetailRow label="Job type" value={user.jobType} />
+        <DetailRow label="Income" value={user.income} />
+        <DetailRow label="Dress style" value={user.dressStyle} />
+        <DetailRow label="Zipcode" value={user.zipcode} />
+        <DetailRow label="Max travel" value={`${user.lookingFor.maxDistance} miles`} />
+      </Card>
+
+      {/* Background check */}
+      <SectionHeader title="Background check" />
+      <Card style={user.backgroundCheck === 'clear' ? { borderColor: T42.success + '66' } : undefined}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <Text style={{ fontSize: 22 }}>🛡️</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[Fonts.subheadline, { color: T42.textPrimary, fontWeight: '600' }]}>
+              Status: {bgLabel}
+            </Text>
+            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+              {user.backgroundCheck === 'clear'
+                ? 'Your background check is verified. Matches can see you\'re trusted.'
+                : `One-time $${BACKGROUND_CHECK_FEE} fee required before your first date.`}
             </Text>
           </View>
         </View>
@@ -77,6 +108,15 @@ export default function ProfileScreen() {
         </View>
       </Card>
     </ScrollView>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
+      <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>{label}</Text>
+      <Text style={[Fonts.subheadline, { color: T42.textPrimary, fontWeight: '600' }]}>{value}</Text>
+    </View>
   );
 }
 

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useReducer, useCallback, type ReactNo
 import {
   UserProfile, MatchChatSession, DateBooking, SubscriptionTier,
   ConsentSettings, MatchCandidate, CuratedMatchBatch,
-  DECISION_WINDOW_MS,
+  DECISION_WINDOW_MS, type PaymentSplit,
 } from '../models/types';
 import { currentUser as defaultUser, upcomingBooking, pastBookings as defaultPast } from '../data/sampleData';
 import { trackEvent } from '../services/services';
@@ -40,6 +40,8 @@ type Action =
   | { type: 'START_CHAT'; session: MatchChatSession }
   | { type: 'UPDATE_CHAT'; session: MatchChatSession }
   | { type: 'CONFIRM_BOOKING'; booking: DateBooking }
+  | { type: 'PAY_DEPOSIT'; bookingId: string }
+  | { type: 'SET_PAYMENT_SPLIT'; bookingId: string; split: PaymentSplit }
   | { type: 'START_LIVE_DATE'; booking: DateBooking }
   | { type: 'COMPLETE_LIVE_DATE' }
   | { type: 'SET_SUBSCRIPTION'; tier: SubscriptionTier }
@@ -70,6 +72,27 @@ function reducer(state: AppState, action: Action): AppState {
         upcomingBookings: [action.booking, ...state.upcomingBookings],
       };
     }
+
+    case 'PAY_DEPOSIT':
+      return {
+        ...state,
+        upcomingBookings: state.upcomingBookings.map(b =>
+          b.id === action.bookingId
+            ? { ...b, yourDeposit: true, theirDeposit: true, venueRevealed: true, status: 'confirmed' as const }
+            : b
+        ),
+      };
+
+    case 'SET_PAYMENT_SPLIT':
+      return {
+        ...state,
+        liveDate: state.liveDate?.id === action.bookingId
+          ? { ...state.liveDate, paymentSplit: action.split }
+          : state.liveDate,
+        upcomingBookings: state.upcomingBookings.map(b =>
+          b.id === action.bookingId ? { ...b, paymentSplit: action.split } : b
+        ),
+      };
 
     case 'START_LIVE_DATE':
       return { ...state, liveDate: { ...action.booking, status: 'live' } };
@@ -104,6 +127,8 @@ interface AppContextValue {
   startChat: (candidate: MatchCandidate, batch: CuratedMatchBatch) => MatchChatSession;
   updateChat: (session: MatchChatSession) => void;
   confirmBooking: (booking: DateBooking) => void;
+  payDeposit: (bookingId: string) => void;
+  setPaymentSplit: (bookingId: string, split: PaymentSplit) => void;
   startLiveDate: (booking: DateBooking) => void;
   completeLiveDate: () => void;
   setSubscription: (tier: SubscriptionTier) => void;
@@ -126,7 +151,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       id: Math.random().toString(36).slice(2),
       candidate,
       experience: batch.experience,
-      proposedTime: batch.request.dateTime,
+      proposedTime: new Date(now.getTime() + 2 * 86_400_000),
       startedAt: now,
       expiresAt: new Date(now.getTime() + DECISION_WINDOW_MS),
       messages: [],
@@ -145,6 +170,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'CONFIRM_BOOKING', booking });
     trackEvent('date_confirmed', state.consent);
   }, [state.consent]);
+
+  const payDeposit = useCallback((bookingId: string) => {
+    dispatch({ type: 'PAY_DEPOSIT', bookingId });
+    trackEvent('deposit_paid', state.consent);
+  }, [state.consent]);
+
+  const setPaymentSplit = useCallback((bookingId: string, split: PaymentSplit) => {
+    dispatch({ type: 'SET_PAYMENT_SPLIT', bookingId, split });
+  }, []);
 
   const startLiveDateAction = useCallback((booking: DateBooking) => {
     dispatch({ type: 'START_LIVE_DATE', booking });
@@ -170,6 +204,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       startChat,
       updateChat,
       confirmBooking: confirmBookingAction,
+      payDeposit,
+      setPaymentSplit,
       startLiveDate: startLiveDateAction,
       completeLiveDate,
       setSubscription,

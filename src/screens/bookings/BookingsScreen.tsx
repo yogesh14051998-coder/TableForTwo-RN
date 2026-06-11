@@ -3,16 +3,16 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
-import { SectionHeader, Card, MatchAvatar, GoldButton } from '../../components/SharedComponents';
+import { SectionHeader, Card, MatchAvatar, GoldButton, GhostButton } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
-import { ADDON_ICONS, type DateBooking } from '../../models/types';
+import { ADDON_ICONS, DATE_DEPOSIT, type DateBooking } from '../../models/types';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
 
 export default function BookingsScreen() {
   const nav = useNavigation<Nav>();
-  const { state, startLiveDate } = useApp();
+  const { state, startLiveDate, payDeposit } = useApp();
 
   const hasAny = state.upcomingBookings.length > 0 || state.pastBookings.length > 0;
 
@@ -34,10 +34,12 @@ export default function BookingsScreen() {
         <>
           <SectionHeader title="Upcoming" />
           {state.upcomingBookings.map(b => (
-            <BookingCard key={b.id} booking={b} onStartLive={() => {
-              startLiveDate(b);
-              nav.navigate('LiveDateSafety', { booking: b });
-            }} />
+            <BookingCard key={b.id} booking={b}
+              onPayDeposit={() => payDeposit(b.id)}
+              onStartLive={() => {
+                startLiveDate(b);
+                nav.navigate('LiveDateSafety', { booking: b });
+              }} />
           ))}
         </>
       )}
@@ -57,6 +59,7 @@ export default function BookingsScreen() {
                     </Text>
                     <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
                       {b.scheduledFor.toLocaleDateString()}
+                      {b.paymentSplit !== 'pending' && ` · ${b.paymentSplit === 'full' ? 'You covered' : 'Split 50/50'}`}
                     </Text>
                   </View>
                   <Text style={[Fonts.caption, { color: T42.gold, fontWeight: '700' }]}>Rate</Text>
@@ -70,8 +73,11 @@ export default function BookingsScreen() {
   );
 }
 
-function BookingCard({ booking, onStartLive }: { booking: DateBooking; onStartLive: () => void }) {
-  const total = booking.experience.estimatedCost + booking.selectedAddOns.reduce((s, a) => s + a.price, 0);
+function BookingCard({ booking, onStartLive, onPayDeposit }: {
+  booking: DateBooking; onStartLive: () => void; onPayDeposit: () => void;
+}) {
+  const awaitingDeposit = !booking.venueRevealed;
+  const addOnTotal = booking.selectedAddOns.reduce((s, a) => s + a.price, 0);
 
   return (
     <Card>
@@ -79,10 +85,10 @@ function BookingCard({ booking, onStartLive }: { booking: DateBooking; onStartLi
         <MatchAvatar name={booking.companion.firstName} size={48} />
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
-            {booking.companion.firstName} · {booking.experience.venueName}
+            {booking.companion.firstName} · {awaitingDeposit ? '🔒 Venue hidden' : booking.experience.venueName}
           </Text>
           <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-            {booking.experience.venueDetail}
+            {booking.experience.title}
           </Text>
         </View>
         {booking.confirmationCode && (
@@ -94,8 +100,31 @@ function BookingCard({ booking, onStartLive }: { booking: DateBooking; onStartLi
         <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
           📅 {booking.scheduledFor.toLocaleDateString()}
         </Text>
-        <Text style={[Fonts.caption, { color: T42.textSecondary }]}>💳 ${total}</Text>
+        <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+          💳 ~${booking.experience.estimatedCost}{addOnTotal > 0 ? ` + $${addOnTotal} add-ons` : ''}
+        </Text>
       </View>
+
+      {/* Deposit status */}
+      {awaitingDeposit && (
+        <View style={s.depositRow}>
+          <Text style={[Fonts.caption, { color: T42.gold }]}>
+            🔒 ${DATE_DEPOSIT} deposit needed from both parties to reveal venue
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+            <View style={[s.depositDot, booking.yourDeposit && s.depositDotPaid]}>
+              <Text style={[Fonts.caption2, { color: booking.yourDeposit ? T42.onGold : T42.textSecondary }]}>
+                You {booking.yourDeposit ? '✓' : '...'}
+              </Text>
+            </View>
+            <View style={[s.depositDot, booking.theirDeposit && s.depositDotPaid]}>
+              <Text style={[Fonts.caption2, { color: booking.theirDeposit ? T42.onGold : T42.textSecondary }]}>
+                {booking.companion.firstName} {booking.theirDeposit ? '✓' : '...'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
 
       {booking.selectedAddOns.length > 0 && (
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
@@ -110,7 +139,13 @@ function BookingCard({ booking, onStartLive }: { booking: DateBooking; onStartLi
       )}
 
       <View style={{ marginTop: 14 }}>
-        <GoldButton icon="🛡️" label="Start Live Date Mode" onPress={onStartLive} />
+        {awaitingDeposit && !booking.yourDeposit ? (
+          <GoldButton icon="💳" label={`Pay $${DATE_DEPOSIT} Deposit`} onPress={onPayDeposit} />
+        ) : booking.venueRevealed ? (
+          <GoldButton icon="🛡️" label="Start Live Date Mode" onPress={onStartLive} />
+        ) : (
+          <GhostButton label="Waiting for match's deposit..." onPress={() => {}} tint={T42.textSecondary} />
+        )}
       </View>
     </Card>
   );
@@ -123,4 +158,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 4, borderRadius: 50,
     backgroundColor: T42.gold + '1F',
   },
+  depositRow: { marginTop: 12, padding: 10, borderRadius: 12, backgroundColor: T42.gold + '0F' },
+  depositDot: {
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 50,
+    backgroundColor: T42.surfaceRaised,
+  },
+  depositDotPaid: { backgroundColor: T42.gold },
 });

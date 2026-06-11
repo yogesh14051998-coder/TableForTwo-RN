@@ -3,17 +3,18 @@ import { View, Text, ScrollView, TouchableOpacity, Switch, Alert, StyleSheet } f
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { T42, Fonts } from '../../theme/theme';
-import { Card, GhostButton } from '../../components/SharedComponents';
+import { Card, GhostButton, GoldButton } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import { startLocationShare, stopLocationShare, sendCheckInReminder, triggerSOS } from '../../services/services';
-import type { DateBooking } from '../../models/types';
+import type { DateBooking, PaymentSplit } from '../../models/types';
 
 const CHECK_IN_WINDOW = 30 * 60 * 1000; // 30 minutes
+const PAYMENT_PROMPT_DELAY = 45 * 60 * 1000; // 45 minutes into date
 
 export default function LiveDateSafetyScreen() {
   const nav = useNavigation();
   const route = useRoute<any>();
-  const { state, completeLiveDate } = useApp();
+  const { state, completeLiveDate, setPaymentSplit } = useApp();
   const booking: DateBooking = route.params.booking;
   const trustedContact = state.currentUser.trustedContact;
 
@@ -23,6 +24,10 @@ export default function LiveDateSafetyScreen() {
   const [missed, setMissed] = useState(false);
   const [sosTriggered, setSosTriggered] = useState(false);
 
+  const [dateStartTime] = useState(Date.now());
+  const [showPaymentPrompt, setShowPaymentPrompt] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState<PaymentSplit>(booking.paymentSplit);
+
   useEffect(() => {
     const iv = setInterval(() => {
       const r = checkInEnd - Date.now();
@@ -31,9 +36,15 @@ export default function LiveDateSafetyScreen() {
         setMissed(true);
         sendCheckInReminder();
       }
+
+      // Show payment prompt at 45 minutes
+      const elapsed = Date.now() - dateStartTime;
+      if (elapsed >= PAYMENT_PROMPT_DELAY && !showPaymentPrompt && paymentChoice === 'pending') {
+        setShowPaymentPrompt(true);
+      }
     }, 1000);
     return () => clearInterval(iv);
-  }, [checkInEnd, missed]);
+  }, [checkInEnd, missed, dateStartTime, showPaymentPrompt, paymentChoice]);
 
   const toggleLocation = (on: boolean) => {
     setSharingLocation(on);
@@ -44,6 +55,12 @@ export default function LiveDateSafetyScreen() {
   const confirmSafe = () => {
     setMissed(false);
     setCheckInEnd(Date.now() + CHECK_IN_WINDOW);
+  };
+
+  const handlePaymentChoice = (choice: 'full' | 'split') => {
+    setPaymentChoice(choice);
+    setShowPaymentPrompt(false);
+    setPaymentSplit(booking.id, choice);
   };
 
   const handleSOS = () => {
@@ -83,6 +100,41 @@ export default function LiveDateSafetyScreen() {
           Enjoy the evening — we've got your back.
         </Text>
       </View>
+
+      {/* Mid-date payment prompt */}
+      {showPaymentPrompt && paymentChoice === 'pending' && (
+        <Card style={{ borderColor: T42.gold, borderWidth: 1.5 }}>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={{ fontSize: 32 }}>💳</Text>
+            <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 8, textAlign: 'center' }]}>
+              How would you like to handle the bill?
+            </Text>
+            <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 6 }]}>
+              Would you like to pay for the full dinner or split it half and half?
+            </Text>
+            <View style={{ width: '100%', gap: 10, marginTop: 16 }}>
+              <GoldButton icon="💰" label="I'll cover the full bill"
+                onPress={() => handlePaymentChoice('full')} />
+              <GhostButton label="Split it 50/50" tint={T42.gold}
+                onPress={() => handlePaymentChoice('split')} />
+            </View>
+            <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 10 }]}>
+              Defaults to split if no response.
+            </Text>
+          </View>
+        </Card>
+      )}
+
+      {paymentChoice !== 'pending' && (
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 22 }}>💳</Text>
+            <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>
+              {paymentChoice === 'full' ? 'You\'re covering the full bill' : 'Splitting 50/50'}
+            </Text>
+          </View>
+        </Card>
+      )}
 
       {/* Check-in ring */}
       <Card style={s.timerCard}>
@@ -154,6 +206,9 @@ export default function LiveDateSafetyScreen() {
       </View>
 
       <GhostButton label="End Date & Leave Safe Mode" onPress={() => {
+        if (paymentChoice === 'pending') {
+          setPaymentSplit(booking.id, 'split');
+        }
         completeLiveDate();
         nav.goBack();
       }} />

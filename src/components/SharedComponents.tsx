@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { T42, Fonts } from '../theme/theme';
-import type { PackageTier, PartnerProvider } from '../models/types';
+import type { PartnerProvider } from '../models/types';
 
 // ── Section Header ──
 
@@ -109,19 +109,6 @@ export function PartnerBadge({ provider }: { provider: PartnerProvider }) {
   );
 }
 
-// ── Tier Badge ──
-
-export function TierBadge({ tier }: { tier: PackageTier }) {
-  const ranges: Record<PackageTier, string> = {
-    Entry: '$200+', Core: '$400 – $800', 'Premium Luxury': '$1,000+',
-  };
-  return (
-    <View style={styles.tierBadge}>
-      <Text style={[Fonts.caption2, { color: T42.gold }]}>👑 {tier} · {ranges[tier]}</Text>
-    </View>
-  );
-}
-
 // ── Star Rating ──
 
 export function StarRating({ rating, onChange }: { rating: number; onChange: (n: number) => void }) {
@@ -192,12 +179,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 50,
     backgroundColor: T42.purple + '26',
-  },
-  tierBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 50,
-    backgroundColor: T42.gold + '1F',
   },
   card: {
     padding: 16,

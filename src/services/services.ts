@@ -1,5 +1,5 @@
 import {
-  ExperienceCategory, Experience, ExperienceRequest,
+  ExperienceCategory, Experience,
   CuratedMatchBatch, DateBooking, UserProfile, AddOn,
   TrustedContact, ConsentSettings, DECISION_WINDOW_MS,
 } from '../models/types';
@@ -11,16 +11,16 @@ const uuid = () => Math.random().toString(36).slice(2, 10);
 // MARK: - Match Service
 
 export async function fetchCuratedBatch(
-  request: ExperienceRequest,
+  category: ExperienceCategory,
   _user: UserProfile,
 ): Promise<CuratedMatchBatch> {
   await delay(600);
-  const pool = experiences.filter(e => e.category === request.category);
+  const pool = experiences.filter(e => e.category === category);
   const experience = pool[0] ?? kaitoOmakase;
   const candidates = [...matchCandidates]
     .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
     .slice(0, 3);
-  return { request, experience, candidates };
+  return { experience, candidates };
 }
 
 export function getRecommendations(_user: UserProfile): Experience[] {
@@ -33,7 +33,7 @@ export async function confirmBooking(draft: DateBooking): Promise<DateBooking> {
   await delay(800);
   return {
     ...draft,
-    status: 'confirmed',
+    status: 'awaitingDeposit',
     confirmationCode: `T42-${uuid().toUpperCase().slice(0, 5)}`,
   };
 }
@@ -62,7 +62,7 @@ export function triggerSOS(booking?: DateBooking) {
 export function trackEvent(
   event: string,
   consent: ConsentSettings,
-  props: Record<string, string> = {},
+  props: Record<string, unknown> = {},
 ) {
   if (!consent.shareAnonymizedUsage) return;
   console.log(`analytics: ${event}`, props);

@@ -4,19 +4,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
-import { SectionHeader, TagChip, GoldButton, TierBadge, Card } from '../../components/SharedComponents';
+import { SectionHeader, TagChip, GoldButton, Card, PartnerBadge } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import { fetchCuratedBatch } from '../../services/services';
-import { ALL_CATEGORIES, CATEGORY_META, tierForBudget, type ExperienceCategory } from '../../models/types';
+import { ALL_CATEGORIES, CATEGORY_META, type ExperienceCategory } from '../../models/types';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
-
-const BUDGET_PRESETS: [number, number][] = [[100, 200], [200, 500], [500, 1000], [1000, 2500]];
-
-function budgetLabel([lo, hi]: [number, number]) {
-  return hi >= 2500 ? `$${lo.toLocaleString()}+` : `$${lo.toLocaleString()} – $${hi.toLocaleString()}`;
-}
 
 export default function ExperienceSelectionScreen() {
   const nav = useNavigation<Nav>();
@@ -24,19 +18,13 @@ export default function ExperienceSelectionScreen() {
   const { state } = useApp();
   const preselect = route.params?.preselect as ExperienceCategory | undefined;
 
-  const [category, setCategory] = useState<ExperienceCategory>(preselect ?? 'Fine Dining');
-  const [budget, setBudget] = useState<[number, number]>([200, 500]);
+  const [category, setCategory] = useState<ExperienceCategory>(preselect ?? 'Dinner');
   const [loading, setLoading] = useState(false);
-
-  const tier = tierForBudget(budget[1]);
 
   const handleFind = async () => {
     setLoading(true);
     try {
-      const batch = await fetchCuratedBatch(
-        { category, budgetRange: budget, dateTime: new Date(Date.now() + 2 * 86_400_000) },
-        state.currentUser,
-      );
+      const batch = await fetchCuratedBatch(category, state.currentUser);
       nav.navigate('CuratedMatch', { batch });
     } finally {
       setLoading(false);
@@ -75,30 +63,16 @@ export default function ExperienceSelectionScreen() {
           })}
         </View>
 
-        {/* Budget */}
-        <SectionHeader title="Budget for two" />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {BUDGET_PRESETS.map(range => (
-              <TagChip key={range.join('-')} label={budgetLabel(range)} icon="💰"
-                selected={budget[0] === range[0] && budget[1] === range[1]}
-                onPress={() => setBudget(range)} />
-            ))}
-          </View>
-        </ScrollView>
-
-        {/* Tier callout */}
+        {/* Location info */}
         <Card style={{ marginTop: 20 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 24 }}>👑</Text>
+            <Text style={{ fontSize: 24 }}>📍</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.headline, { color: T42.textPrimary }]}>{tier} package</Text>
+              <Text style={[Fonts.headline, { color: T42.textPrimary }]}>Near your area</Text>
               <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                Curated venues in the {tierForBudget(budget[1]) === 'Entry' ? '$200+' :
-                  tier === 'Core' ? '$400 – $800' : '$1,000+'} range
+                Zipcode {state.currentUser.zipcode} · Within {state.currentUser.lookingFor.maxDistance} miles
               </Text>
             </View>
-            <TierBadge tier={tier} />
           </View>
         </Card>
       </ScrollView>

@@ -15,6 +15,9 @@
         "backgroundColor": "#0D0A13"
       },
       "package": "com.tablefortwo.app"
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }

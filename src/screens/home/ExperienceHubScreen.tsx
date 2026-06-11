@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
-import { SectionHeader, Card, MatchAvatar, GhostButton, TierBadge, PartnerBadge } from '../../components/SharedComponents';
+import { SectionHeader, Card, MatchAvatar, GhostButton, PartnerBadge } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import { getRecommendations } from '../../services/services';
 import type { MainStackParams } from '../../navigation/RootNavigator';
@@ -26,7 +26,7 @@ export default function ExperienceHubScreen() {
         Good evening, {state.currentUser.firstName}
       </Text>
       <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginTop: 4 }]}>
-        {state.currentUser.city}
+        {state.currentUser.zipcode} · {state.currentUser.city || 'Your area'}
       </Text>
 
       {/* Plan another date CTA */}
@@ -35,7 +35,7 @@ export default function ExperienceHubScreen() {
           <Text style={{ fontSize: 24 }}>✨</Text>
           <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginTop: 8 }]}>Plan another date</Text>
           <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginTop: 6 }]}>
-            Choose an experience, set the budget, and meet someone who already said yes to the same evening.
+            Choose an experience near your zipcode and meet someone who already said yes to the same evening.
           </Text>
           <Text style={{ alignSelf: 'flex-end', fontSize: 28, marginTop: 8 }}>➡️</Text>
         </Card>
@@ -94,7 +94,9 @@ function ExperienceCard({ experience }: { experience: Experience }) {
           {experience.venueName} — {experience.venueDetail}
         </Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-          <TierBadge tier={experience.packageTier} />
+          <Text style={[Fonts.caption, { color: T42.gold, fontWeight: '600' }]}>
+            ~${experience.estimatedCost} for two
+          </Text>
           <PartnerBadge provider={experience.provider} />
         </View>
       </View>

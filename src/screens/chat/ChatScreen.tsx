@@ -32,9 +32,8 @@ export default function ChatScreen() {
   const [remaining, setRemaining] = useState(session.expiresAt.getTime() - Date.now());
   const scrollRef = useRef<ScrollView>(null);
 
-  const urgent = remaining < 10 * 60 * 1000;
+  const urgent = remaining < 60 * 60 * 1000; // last hour
 
-  // 1-second countdown tick
   useEffect(() => {
     const iv = setInterval(() => {
       const r = session.expiresAt.getTime() - Date.now();
@@ -64,7 +63,6 @@ export default function ChatScreen() {
     updateChat(updated);
     setDraft('');
 
-    // Demo auto-reply
     setTimeout(() => {
       if (updated.state !== 'countdown') return;
       const reply: ChatMessage = {
@@ -92,7 +90,7 @@ export default function ChatScreen() {
       <View style={s.countdownHeader}>
         <CountdownPill label={formatCountdown(remaining)} urgent={urgent} />
         <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 4 }]}>
-          {urgent ? "Time's almost up — make the call." : 'Lock in your plans before the window closes.'}
+          {urgent ? "Time's running low — make the call." : '24-hour window to lock in your plans.'}
         </Text>
       </View>
 
@@ -101,7 +99,7 @@ export default function ChatScreen() {
         <Text style={{ fontSize: 18, marginRight: 8 }}>{meta.icon}</Text>
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.subheadline, { color: T42.textPrimary }]} numberOfLines={1}>
-            {session.experience.title} · {session.experience.venueName}
+            {session.experience.title}
           </Text>
           <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
             {session.proposedTime.toLocaleDateString()} · {session.proposedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -158,7 +156,7 @@ export default function ChatScreen() {
 
       {session.state === 'expired' && (
         <View style={[s.banner, { backgroundColor: T42.surface }]}>
-          <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>⏳ The hour has passed.</Text>
+          <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>⏳ The 24 hours have passed.</Text>
           <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 4 }]}>
             No hard feelings — pick a new experience and we'll curate a fresh table.
           </Text>
