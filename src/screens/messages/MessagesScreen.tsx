@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
@@ -22,7 +23,7 @@ export default function MessagesScreen() {
   if (sessions.length === 0) {
     return (
       <View style={[s.root, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ fontSize: 52 }}>💬</Text>
+        <Ionicons name="chatbubbles-outline" size={56} color={T42.textSecondary} />
         <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginTop: 12 }]}>
           No conversations yet
         </Text>
@@ -66,10 +67,14 @@ function ChatRow({ session }: { session: MatchChatSession }) {
           </Text>
         </View>
         {session.state === 'countdown' && (
-          <CountdownPill label={label} urgent={remaining < 10 * 60 * 1000} />
+          <CountdownPill label={label} urgent={remaining < 5 * 60 * 1000} />
         )}
-        {session.state === 'dateConfirmed' && <Text style={{ fontSize: 22 }}>✅</Text>}
-        {session.state === 'expired' && <Text style={{ fontSize: 22, opacity: 0.5 }}>⏳</Text>}
+        {session.state === 'dateConfirmed' && (
+          <Ionicons name="checkmark-circle" size={22} color={T42.success} />
+        )}
+        {session.state === 'expired' && (
+          <Ionicons name="timer-outline" size={22} color={T42.textSecondary} style={{ opacity: 0.5 }} />
+        )}
       </View>
     </Card>
   );

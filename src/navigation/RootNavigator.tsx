@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { T42 } from '../theme/theme';
 import { useApp } from '../context/AppContext';
 
@@ -18,8 +18,6 @@ import BookingsScreen from '../screens/bookings/BookingsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
 import type { CuratedMatchBatch, MatchChatSession, DateBooking } from '../models/types';
-
-// ── Param lists ──
 
 export type MainStackParams = {
   HomeTabs: undefined;
@@ -41,12 +39,13 @@ const screenOptions = {
   contentStyle: { backgroundColor: T42.background },
 };
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Experiences: '✨', Messages: '💬', Bookings: '📅', 'Table for 2+': '👑',
-  };
-  return <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{icons[label] ?? '•'}</Text>;
-}
+const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
+  Home: { active: 'home', inactive: 'home-outline' },
+  Matches: { active: 'heart', inactive: 'heart-outline' },
+  Experience: { active: 'compass', inactive: 'compass-outline' },
+  Messages: { active: 'chatbubble', inactive: 'chatbubble-outline' },
+  Profile: { active: 'person', inactive: 'person-outline' },
+};
 
 function HomeTabs() {
   return (
@@ -54,16 +53,32 @@ function HomeTabs() {
       screenOptions={({ route }) => ({
         headerStyle: { backgroundColor: T42.background },
         headerTintColor: T42.textPrimary,
-        tabBarStyle: { backgroundColor: T42.surface, borderTopColor: T42.stroke },
+        tabBarStyle: {
+          backgroundColor: T42.surface,
+          borderTopColor: T42.stroke,
+          height: 85,
+          paddingBottom: 28,
+          paddingTop: 8,
+        },
         tabBarActiveTintColor: T42.gold,
         tabBarInactiveTintColor: T42.textSecondary,
-        tabBarIcon: ({ focused }) => <TabIcon label={route.name} focused={focused} />,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarIcon: ({ focused, color }) => {
+          const icons = TAB_ICONS[route.name];
+          if (!icons) return null;
+          return <Ionicons name={focused ? icons.active : icons.inactive} size={24} color={color} />;
+        },
       })}
     >
-      <Tab.Screen name="Experiences" component={ExperienceHubScreen} />
+      <Tab.Screen name="Home" component={ExperienceHubScreen}
+        options={{ headerTitle: 'Table for 2' }} />
+      <Tab.Screen name="Matches" component={ExperienceSelectionScreen}
+        options={{ headerTitle: 'Find Matches' }} />
+      <Tab.Screen name="Experience" component={BookingsScreen}
+        options={{ headerTitle: 'Bookings' }} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
-      <Tab.Screen name="Bookings" component={BookingsScreen} />
-      <Tab.Screen name="Table for 2+" component={ProfileScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen}
+        options={{ headerTitle: 'My Profile' }} />
     </Tab.Navigator>
   );
 }
@@ -79,17 +94,17 @@ export default function RootNavigator() {
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="HomeTabs" component={HomeTabs} options={{ headerShown: false }} />
       <Stack.Screen name="ExperienceSelection" component={ExperienceSelectionScreen}
-        options={{ title: 'Choose the Experience' }} />
+        options={{ title: 'Choose Experience' }} />
       <Stack.Screen name="CuratedMatch" component={CuratedMatchScreen}
-        options={{ title: 'Curated Matches' }} />
+        options={{ title: 'Your Matches' }} />
       <Stack.Screen name="Chat" component={ChatScreen}
         options={({ route }) => ({ title: route.params.session.candidate.firstName })} />
       <Stack.Screen name="ReviewConfirm" component={ReviewConfirmScreen}
-        options={{ title: 'Review & Confirm' }} />
+        options={{ title: 'Confirm Date' }} />
       <Stack.Screen name="LiveDateSafety" component={LiveDateSafetyScreen}
         options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       <Stack.Screen name="Feedback" component={FeedbackScreen}
-        options={{ title: 'How was it?', presentation: 'modal' }} />
+        options={{ title: 'Feedback', presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }

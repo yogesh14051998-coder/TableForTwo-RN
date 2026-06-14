@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { AppProvider } from './src/context/AppContext';
 import RootNavigator from './src/navigation/RootNavigator';
+import SplashScreen from './src/screens/splash/SplashScreen';
 import { T42 } from './src/theme/theme';
 
 const DarkTheme = {
@@ -20,6 +21,17 @@ const DarkTheme = {
 };
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  if (showSplash) {
+    return (
+      <>
+        <StatusBar style="light" />
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+      </>
+    );
+  }
+
   return (
     <AppProvider>
       <NavigationContainer theme={DarkTheme}>

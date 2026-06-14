@@ -130,7 +130,7 @@ export interface ChatMessage {
 
 export type ChatState = 'countdown' | 'dateConfirmed' | 'expired';
 
-export const DECISION_WINDOW_MS = 24 * 60 * 60 * 1000; // 24 hours
+export const DECISION_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
 
 export interface MatchChatSession {
   id: string;
@@ -208,11 +208,11 @@ export interface PostDateFeedback {
 export type SubscriptionTier = 'Free' | 'Silver' | 'Gold' | 'Diamond';
 export const PAID_TIERS: SubscriptionTier[] = ['Silver', 'Gold', 'Diamond'];
 
-export const TIER_INFO: Record<SubscriptionTier, { price: number; perks: string[] }> = {
-  Free:    { price: 0,     perks: ['Browse experiences', '1 curated batch per week'] },
-  Silver:  { price: 14.99, perks: ['3 curated batches per week', 'Standard reservations'] },
-  Gold:    { price: 29.99, perks: ['Daily curated batches', 'Priority reservations', '1 free add-on monthly'] },
-  Diamond: { price: 59.99, perks: ['Unlimited curated batches', 'Concierge planning', 'VIP access', 'Member events'] },
+export const TIER_INFO: Record<SubscriptionTier, { price: number; perks: string[]; matchesPerBatch: number }> = {
+  Free:    { price: 0,     perks: ['Browse experiences', '1 curated batch per week'], matchesPerBatch: 1 },
+  Silver:  { price: 29.99, perks: ['3 curated matches per batch', 'Standard reservations', 'Chat window'], matchesPerBatch: 3 },
+  Gold:    { price: 49.99, perks: ['5 curated matches per batch', 'Priority matching', '1 free add-on monthly', 'Premium venues'], matchesPerBatch: 5 },
+  Diamond: { price: 99.99, perks: ['Unlimited matches', 'Concierge planning', 'VIP access', 'Priority support', 'Member events'], matchesPerBatch: 10 },
 };
 
 export interface ConsentSettings {

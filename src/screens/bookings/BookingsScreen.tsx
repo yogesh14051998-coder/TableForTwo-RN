@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
 import { SectionHeader, Card, MatchAvatar, GoldButton, GhostButton } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
-import { ADDON_ICONS, DATE_DEPOSIT, type DateBooking } from '../../models/types';
+import { DATE_DEPOSIT, type DateBooking } from '../../models/types';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
@@ -20,19 +21,19 @@ export default function BookingsScreen() {
     <ScrollView style={s.root} contentContainerStyle={s.content}>
       {!hasAny && (
         <View style={{ alignItems: 'center', paddingTop: 80 }}>
-          <Text style={{ fontSize: 52 }}>📅</Text>
+          <Ionicons name="calendar-outline" size={56} color={T42.textSecondary} />
           <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginTop: 12 }]}>
-            Nothing on the calendar
+            No upcoming dates
           </Text>
           <Text style={[Fonts.subheadline, { color: T42.textSecondary, textAlign: 'center', marginTop: 8 }]}>
-            Confirmed dates appear here with every detail handled.
+            Your future scheduled dates will appear here with every detail handled.
           </Text>
         </View>
       )}
 
       {state.upcomingBookings.length > 0 && (
         <>
-          <SectionHeader title="Upcoming" />
+          <SectionHeader title="Upcoming Dates" />
           {state.upcomingBookings.map(b => (
             <BookingCard key={b.id} booking={b}
               onPayDeposit={() => payDeposit(b.id)}
@@ -46,23 +47,29 @@ export default function BookingsScreen() {
 
       {state.pastBookings.length > 0 && (
         <>
-          <SectionHeader title="Past dates" />
+          <SectionHeader title="Past Dates" />
           {state.pastBookings.map(b => (
             <TouchableOpacity key={b.id}
               onPress={() => nav.navigate('Feedback', { booking: b })} activeOpacity={0.7}>
               <Card>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <Text style={{ fontSize: 24 }}>🍽️</Text>
+                  <Ionicons name="restaurant-outline" size={24} color={T42.textSecondary} />
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.subheadline, { color: T42.textPrimary, fontWeight: '600' }]}>
                       {b.companion.firstName} · {b.experience.venueName}
                     </Text>
-                    <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                      {b.scheduledFor.toLocaleDateString()}
-                      {b.paymentSplit !== 'pending' && ` · ${b.paymentSplit === 'full' ? 'You covered' : 'Split 50/50'}`}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      <Ionicons name="calendar-outline" size={12} color={T42.textSecondary} />
+                      <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+                        {b.scheduledFor.toLocaleDateString()}
+                        {b.paymentSplit !== 'pending' && ` · ${b.paymentSplit === 'full' ? 'Date went well' : 'Split 50/50'}`}
+                      </Text>
+                    </View>
                   </View>
-                  <Text style={[Fonts.caption, { color: T42.gold, fontWeight: '700' }]}>Rate</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="star-outline" size={16} color={T42.gold} />
+                    <Text style={[Fonts.caption, { color: T42.gold, fontWeight: '700' }]}>Rate</Text>
+                  </View>
                 </View>
               </Card>
             </TouchableOpacity>
@@ -77,18 +84,20 @@ function BookingCard({ booking, onStartLive, onPayDeposit }: {
   booking: DateBooking; onStartLive: () => void; onPayDeposit: () => void;
 }) {
   const awaitingDeposit = !booking.venueRevealed;
-  const addOnTotal = booking.selectedAddOns.reduce((s, a) => s + a.price, 0);
 
   return (
     <Card>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <MatchAvatar name={booking.companion.firstName} size={48} />
         <View style={{ flex: 1 }}>
-          <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
-            {booking.companion.firstName} · {awaitingDeposit ? '🔒 Venue hidden' : booking.experience.venueName}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
+              {booking.companion.firstName}
+            </Text>
+            {awaitingDeposit && <Ionicons name="lock-closed" size={14} color={T42.textSecondary} />}
+          </View>
           <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-            {booking.experience.title}
+            {awaitingDeposit ? 'Venue hidden' : booking.experience.venueName} · {booking.experience.title}
           </Text>
         </View>
         {booking.confirmationCode && (
@@ -97,20 +106,28 @@ function BookingCard({ booking, onStartLive, onPayDeposit }: {
       </View>
 
       <View style={{ flexDirection: 'row', gap: 14, marginTop: 10 }}>
-        <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-          📅 {booking.scheduledFor.toLocaleDateString()}
-        </Text>
-        <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-          💳 ~${booking.experience.estimatedCost}{addOnTotal > 0 ? ` + $${addOnTotal} add-ons` : ''}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="calendar-outline" size={14} color={T42.textSecondary} />
+          <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+            {booking.scheduledFor.toLocaleDateString()}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="card-outline" size={14} color={T42.textSecondary} />
+          <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+            ~${booking.experience.estimatedCost}
+          </Text>
+        </View>
       </View>
 
-      {/* Deposit status */}
       {awaitingDeposit && (
         <View style={s.depositRow}>
-          <Text style={[Fonts.caption, { color: T42.gold }]}>
-            🔒 ${DATE_DEPOSIT} deposit needed from both parties to reveal venue
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="lock-closed-outline" size={14} color={T42.gold} />
+            <Text style={[Fonts.caption, { color: T42.gold }]}>
+              ${DATE_DEPOSIT} deposit needed from both parties
+            </Text>
+          </View>
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
             <View style={[s.depositDot, booking.yourDeposit && s.depositDotPaid]}>
               <Text style={[Fonts.caption2, { color: booking.yourDeposit ? T42.onGold : T42.textSecondary }]}>
@@ -130,9 +147,7 @@ function BookingCard({ booking, onStartLive, onPayDeposit }: {
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
           {booking.selectedAddOns.map(a => (
             <View key={a.id} style={s.addOnChip}>
-              <Text style={[Fonts.caption2, { color: T42.gold }]}>
-                {ADDON_ICONS[a.kind]} {a.kind}
-              </Text>
+              <Text style={[Fonts.caption2, { color: T42.gold }]}>{a.kind}</Text>
             </View>
           ))}
         </View>
@@ -140,9 +155,9 @@ function BookingCard({ booking, onStartLive, onPayDeposit }: {
 
       <View style={{ marginTop: 14 }}>
         {awaitingDeposit && !booking.yourDeposit ? (
-          <GoldButton icon="💳" label={`Pay $${DATE_DEPOSIT} Deposit`} onPress={onPayDeposit} />
+          <GoldButton label={`Pay $${DATE_DEPOSIT} Deposit`} onPress={onPayDeposit} />
         ) : booking.venueRevealed ? (
-          <GoldButton icon="🛡️" label="Start Live Date Mode" onPress={onStartLive} />
+          <GoldButton label="Start Live Date Mode" onPress={onStartLive} />
         ) : (
           <GhostButton label="Waiting for match's deposit..." onPress={() => {}} tint={T42.textSecondary} />
         )}

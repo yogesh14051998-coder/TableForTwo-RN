@@ -1,6 +1,9 @@
 node_modules/
 .expo/
 dist/
+.vercel/
+.claude/
+*.mp4
 npm-debug.*
 *.jks
 *.p8

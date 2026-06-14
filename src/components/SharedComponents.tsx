@@ -1,21 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { T42, Fonts } from '../theme/theme';
 import type { PartnerProvider } from '../models/types';
-
-// ── Section Header ──
 
 export function SectionHeader({ title }: { title: string }) {
   return <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginBottom: 4 }]}>{title}</Text>;
 }
 
-// ── Tag Chip ──
-
 export function TagChip({
-  label, icon, selected, onPress,
+  label, selected, onPress,
 }: {
-  label: string; icon?: string; selected: boolean; onPress: () => void;
+  label: string; selected: boolean; onPress: () => void;
 }) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
@@ -25,20 +22,17 @@ export function TagChip({
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
           style={styles.chip}
         >
-          {icon ? <Text style={{ marginRight: 4 }}>{icon}</Text> : null}
+          <Ionicons name="checkmark" size={14} color={T42.onGold} style={{ marginRight: 4 }} />
           <Text style={[Fonts.subheadline, { color: T42.onGold }]}>{label}</Text>
         </LinearGradient>
       ) : (
         <View style={[styles.chip, { backgroundColor: T42.surfaceRaised, borderWidth: 1, borderColor: T42.stroke }]}>
-          {icon ? <Text style={{ marginRight: 4 }}>{icon}</Text> : null}
           <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>{label}</Text>
         </View>
       )}
     </TouchableOpacity>
   );
 }
-
-// ── Gold Primary Button ──
 
 export function GoldButton({
   label, icon, onPress, disabled, loading,
@@ -59,8 +53,6 @@ export function GoldButton({
   );
 }
 
-// ── Ghost Button ──
-
 export function GhostButton({
   label, onPress, tint,
 }: {
@@ -77,12 +69,10 @@ export function GhostButton({
   );
 }
 
-// ── Countdown Pill ──
-
 export function CountdownPill({ label, urgent }: { label: string; urgent?: boolean }) {
   const inner = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <Text style={{ fontSize: 12 }}>⏱️</Text>
+      <Ionicons name="timer-outline" size={14} color={urgent ? '#fff' : T42.onGold} />
       <Text style={[Fonts.caption2, { color: urgent ? '#fff' : T42.onGold, fontVariant: ['tabular-nums'] }]}>
         {label}
       </Text>
@@ -99,33 +89,30 @@ export function CountdownPill({ label, urgent }: { label: string; urgent?: boole
   );
 }
 
-// ── Partner Badge ──
-
 export function PartnerBadge({ provider }: { provider: PartnerProvider }) {
   return (
     <View style={[styles.partnerBadge]}>
+      <Ionicons name="link-outline" size={10} color={T42.purple} style={{ marginRight: 3 }} />
       <Text style={[Fonts.caption2, { color: T42.purple }]}>via {provider}</Text>
     </View>
   );
 }
 
-// ── Star Rating ──
-
 export function StarRating({ rating, onChange }: { rating: number; onChange: (n: number) => void }) {
   return (
-    <View style={{ flexDirection: 'row', gap: 12 }}>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
       {[1, 2, 3, 4, 5].map(n => (
         <TouchableOpacity key={n} onPress={() => onChange(n)}>
-          <Text style={{ fontSize: 24, color: n <= rating ? T42.gold : T42.textSecondary }}>
-            {n <= rating ? '★' : '☆'}
-          </Text>
+          <Ionicons
+            name={n <= rating ? 'star' : 'star-outline'}
+            size={28}
+            color={n <= rating ? T42.gold : T42.textSecondary}
+          />
         </TouchableOpacity>
       ))}
     </View>
   );
 }
-
-// ── Card wrapper ──
 
 export function Card({ children, style }: { children: React.ReactNode; style?: any }) {
   return (
@@ -135,22 +122,27 @@ export function Card({ children, style }: { children: React.ReactNode; style?: a
   );
 }
 
-// ── Match Avatar ──
-
 export function MatchAvatar({ name, size = 64 }: { name: string; size?: number }) {
   return (
     <LinearGradient
       colors={[T42.purple, T42.purpleDeep]}
       style={[styles.avatar, { width: size, height: size, borderRadius: size / 2 }]}
     >
-      <Text style={{ fontSize: size * 0.45, color: '#fff', fontFamily: 'serif', fontWeight: '600' }}>
+      <Text style={{ fontSize: size * 0.42, color: '#fff', fontFamily: 'serif', fontWeight: '600' }}>
         {name[0]}
       </Text>
     </LinearGradient>
   );
 }
 
-// ── Styles ──
+export function IconLabel({ icon, label, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; color?: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Ionicons name={icon} size={18} color={color ?? T42.textSecondary} />
+      <Text style={[Fonts.subheadline, { color: color ?? T42.textPrimary }]}>{label}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   chip: {
@@ -175,6 +167,8 @@ const styles = StyleSheet.create({
     borderRadius: 50,
   },
   partnerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 50,

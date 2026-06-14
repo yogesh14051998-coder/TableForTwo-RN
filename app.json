@@ -18,6 +18,11 @@
     },
     "plugins": [
       "expo-asset"
-    ]
+    ],
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/logo.jpeg"
+    }
   }
 }

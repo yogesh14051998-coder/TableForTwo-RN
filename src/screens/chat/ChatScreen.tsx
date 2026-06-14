@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
@@ -16,11 +17,17 @@ type Nav = NativeStackNavigationProp<MainStackParams>;
 
 function formatCountdown(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
+  const m = Math.floor(total / 60);
   const s = total % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
+
+const CATEGORY_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  Dinner: 'restaurant',
+  Activity: 'compass',
+  Drinks: 'wine',
+  Custom: 'sparkles',
+};
 
 export default function ChatScreen() {
   const nav = useNavigation<Nav>();
@@ -30,9 +37,13 @@ export default function ChatScreen() {
   const [session, setSession] = useState<MatchChatSession>(route.params.session);
   const [draft, setDraft] = useState('');
   const [remaining, setRemaining] = useState(session.expiresAt.getTime() - Date.now());
+  const [datePlanPromptShown, setDatePlanPromptShown] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  const urgent = remaining < 60 * 60 * 1000; // last hour
+  const urgent = remaining < 5 * 60 * 1000;
+  const totalWindow = 30 * 60 * 1000;
+  const elapsed = totalWindow - remaining;
+  const shouldPromptDatePlan = elapsed >= 25 * 60 * 1000 && !datePlanPromptShown;
 
   useEffect(() => {
     const iv = setInterval(() => {
@@ -48,6 +59,12 @@ export default function ChatScreen() {
     }, 1000);
     return () => clearInterval(iv);
   }, [session.expiresAt, session.state]);
+
+  useEffect(() => {
+    if (shouldPromptDatePlan) {
+      setDatePlanPromptShown(true);
+    }
+  }, [shouldPromptDatePlan]);
 
   const send = () => {
     const text = draft.trim();
@@ -79,7 +96,7 @@ export default function ChatScreen() {
     }, 1500);
   };
 
-  const meta = CATEGORY_META[session.experience.category];
+  const catIcon = CATEGORY_ICONS[session.experience.category] ?? 'sparkles';
 
   return (
     <KeyboardAvoidingView style={s.root}
@@ -90,13 +107,13 @@ export default function ChatScreen() {
       <View style={s.countdownHeader}>
         <CountdownPill label={formatCountdown(remaining)} urgent={urgent} />
         <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 4 }]}>
-          {urgent ? "Time's running low — make the call." : '24-hour window to lock in your plans.'}
+          {urgent ? "Time's running low — make the call." : '30-minute window to plan your date.'}
         </Text>
       </View>
 
       {/* Plan card */}
       <View style={s.planCard}>
-        <Text style={{ fontSize: 18, marginRight: 8 }}>{meta.icon}</Text>
+        <Ionicons name={catIcon} size={20} color={T42.gold} style={{ marginRight: 8 }} />
         <View style={{ flex: 1 }}>
           <Text style={[Fonts.subheadline, { color: T42.textPrimary }]} numberOfLines={1}>
             {session.experience.title}
@@ -125,12 +142,30 @@ export default function ChatScreen() {
             )}
           </View>
         ))}
+
+        {/* Date planning prompt at ~25 min mark */}
+        {datePlanPromptShown && session.state === 'countdown' && (
+          <View style={s.datePlanPrompt}>
+            <View style={s.datePlanHeader}>
+              <Ionicons name="calendar" size={20} color={T42.gold} />
+              <Text style={[Fonts.headline, { color: T42.gold, marginLeft: 8 }]}>Time to plan your date!</Text>
+            </View>
+            <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 6 }]}>
+              Your chat window is closing soon. Lock in your plans now!
+            </Text>
+            <TouchableOpacity style={s.datePlanBtn} activeOpacity={0.8}
+              onPress={() => nav.navigate('ReviewConfirm', { session })}>
+              <Ionicons name="checkmark-circle" size={18} color={T42.onGold} />
+              <Text style={[Fonts.headline, { color: T42.onGold, marginLeft: 6 }]}>Review & Confirm Date</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {/* Footer */}
       {session.state === 'countdown' && (
         <View style={s.footer}>
-          <GoldButton icon="✅" label="Review & Confirm Date"
+          <GoldButton label="Review & Confirm Date"
             onPress={() => nav.navigate('ReviewConfirm', { session })} />
           <View style={s.inputRow}>
             <TextInput value={draft} onChangeText={setDraft}
@@ -139,7 +174,7 @@ export default function ChatScreen() {
               multiline style={s.input} />
             <TouchableOpacity onPress={send} disabled={!draft.trim()}>
               <LinearGradient colors={[T42.gold, T42.goldDeep]} style={s.sendBtn}>
-                <Text style={{ color: T42.onGold, fontSize: 18, fontWeight: '700' }}>↑</Text>
+                <Ionicons name="arrow-up" size={20} color={T42.onGold} />
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -148,18 +183,17 @@ export default function ChatScreen() {
 
       {session.state === 'dateConfirmed' && (
         <View style={[s.banner, { backgroundColor: T42.success + '1F' }]}>
-          <Text style={[Fonts.subheadline, { color: T42.success }]}>
-            ✅ Date confirmed — see it in Bookings.
+          <Ionicons name="checkmark-circle" size={22} color={T42.success} />
+          <Text style={[Fonts.subheadline, { color: T42.success, marginLeft: 8 }]}>
+            Date confirmed — see it in Bookings.
           </Text>
         </View>
       )}
 
       {session.state === 'expired' && (
         <View style={[s.banner, { backgroundColor: T42.surface }]}>
-          <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>⏳ The 24 hours have passed.</Text>
-          <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 4 }]}>
-            No hard feelings — pick a new experience and we'll curate a fresh table.
-          </Text>
+          <Ionicons name="timer-outline" size={22} color={T42.textSecondary} />
+          <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginLeft: 8 }]}>The 30 minutes have passed.</Text>
         </View>
       )}
     </KeyboardAvoidingView>
@@ -170,13 +204,23 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T42.background },
   countdownHeader: { alignItems: 'center', paddingVertical: 12, backgroundColor: T42.surface + 'B3' },
   planCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 10, backgroundColor: T42.surfaceRaised,
   },
   bubbleSent: { maxWidth: '75%' as any, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
   bubbleReceived: {
     maxWidth: '75%' as any, paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: 18, backgroundColor: T42.surfaceRaised,
+  },
+  datePlanPrompt: {
+    padding: 16, borderRadius: 16, borderWidth: 1.5, borderColor: T42.gold + '60',
+    backgroundColor: T42.gold + '0F', marginTop: 8,
+  },
+  datePlanHeader: { flexDirection: 'row', alignItems: 'center' },
+  datePlanBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    marginTop: 12, paddingVertical: 12, borderRadius: 50,
+    backgroundColor: T42.gold,
   },
   footer: { paddingHorizontal: 16, paddingBottom: 12, gap: 8 },
   inputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 },
@@ -185,5 +229,5 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingVertical: 10, borderRadius: 22, maxHeight: 100, fontSize: 15,
   },
   sendBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  banner: { paddingVertical: 16, alignItems: 'center' },
+  banner: { flexDirection: 'row', paddingVertical: 16, alignItems: 'center', justifyContent: 'center' },
 });

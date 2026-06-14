@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { T42, Fonts } from '../../theme/theme';
 import {
@@ -9,7 +10,15 @@ import {
 import { useApp } from '../../context/AppContext';
 import { confirmBooking } from '../../services/services';
 import { addOns as sampleAddOns } from '../../data/sampleData';
-import { ADDON_ICONS, DATE_DEPOSIT, type AddOn, type DateBooking, type MatchChatSession } from '../../models/types';
+import { DATE_DEPOSIT, type AddOn, type DateBooking, type MatchChatSession } from '../../models/types';
+
+const ADDON_IONICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
+  flowers: 'flower-outline',
+  dessert: 'ice-cream-outline',
+  photography: 'camera-outline',
+  transport: 'car-outline',
+  gift: 'gift-outline',
+};
 
 export default function ReviewConfirmScreen() {
   const route = useRoute<any>();
@@ -20,8 +29,6 @@ export default function ReviewConfirmScreen() {
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState<DateBooking | null>(null);
   const [depositPaid, setDepositPaid] = useState(false);
-
-  const addOnTotal = selectedAddOns.reduce((sum, a) => sum + a.price, 0);
 
   const toggle = (addOn: AddOn) => {
     setSelectedAddOns(prev =>
@@ -60,18 +67,20 @@ export default function ReviewConfirmScreen() {
     setDepositPaid(true);
   };
 
-  // Deposit paid — show venue
   if (confirmed && depositPaid) {
     return (
       <View style={[s.root, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
-        <Text style={{ fontSize: 76 }}>✅</Text>
-        <Text style={[Fonts.displayLarge, { color: T42.textPrimary, marginTop: 16 }]}>It's a date.</Text>
+        <Ionicons name="checkmark-circle" size={76} color={T42.success} />
+        <Text style={[Fonts.displayLarge, { color: T42.textPrimary, marginTop: 16, textAlign: 'center' }]}>
+          It's a date.
+        </Text>
         <Text style={[Fonts.subheadline, { color: T42.textSecondary, textAlign: 'center', marginTop: 12 }]}>
           {confirmed.experience.venueName} · {confirmed.scheduledFor.toLocaleDateString()}
         </Text>
-        <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 6 }]}>
-          📍 {confirmed.experience.address}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+          <Ionicons name="location-outline" size={14} color={T42.textSecondary} />
+          <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{confirmed.experience.address}</Text>
+        </View>
         {confirmed.confirmationCode && (
           <View style={s.confirmBadge}>
             <Text style={[Fonts.caption2, { color: T42.purple }]}>Confirmation {confirmed.confirmationCode}</Text>
@@ -81,12 +90,11 @@ export default function ReviewConfirmScreen() {
     );
   }
 
-  // Awaiting deposit
   if (confirmed) {
     return (
       <View style={[s.root, { justifyContent: 'center', alignItems: 'center', padding: 40 }]}>
-        <Text style={{ fontSize: 56 }}>🔒</Text>
-        <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginTop: 16 }]}>
+        <Ionicons name="lock-closed" size={56} color={T42.gold} />
+        <Text style={[Fonts.displaySmall, { color: T42.textPrimary, marginTop: 16, textAlign: 'center' }]}>
           Almost there!
         </Text>
         <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 12 }]}>
@@ -102,7 +110,7 @@ export default function ReviewConfirmScreen() {
           </Text>
         </Card>
         <View style={{ width: '100%', marginTop: 16 }}>
-          <GoldButton icon="💳" label={`Pay $${DATE_DEPOSIT} Deposit`} onPress={handlePayDeposit} />
+          <GoldButton label={`Pay $${DATE_DEPOSIT} Deposit`} onPress={handlePayDeposit} />
         </View>
       </View>
     );
@@ -111,118 +119,93 @@ export default function ReviewConfirmScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.content}>
-        {/* Date summary — venue hidden */}
-        <Card>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Text style={{ fontSize: 24 }}>🔒</Text>
+        <Text style={[Fonts.displayMedium, { color: T42.textPrimary, textAlign: 'center' }]}>
+          Review & Confirm{'\n'}Your Date
+        </Text>
+        <Text style={[Fonts.subheadline, { color: T42.textSecondary, textAlign: 'center', marginTop: 4 }]}>
+          Here's what you're planning
+        </Text>
+
+        {/* Venue card */}
+        <Card style={{ marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <LinearGradient colors={[T42.purple, T42.purpleDeep]} style={s.venueIcon}>
+              <Ionicons name="restaurant" size={24} color="rgba(255,255,255,0.9)" />
+            </LinearGradient>
             <View style={{ flex: 1 }}>
-              <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
-                {session.experience.title}
+              <Text style={[Fonts.headline, { color: T42.textPrimary, fontSize: 18 }]}>
+                {session.experience.venueName}
               </Text>
               <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                Venue revealed after both deposits are confirmed
+                {session.experience.venueDetail} · ~${session.experience.estimatedCost}
               </Text>
             </View>
-          </View>
-          <View style={s.divider} />
-          <DetailRow icon="📅" label={session.proposedTime.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} />
-          <DetailRow icon="🕗" label={session.proposedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
-          <DetailRow icon="👥" label={`You & ${session.candidate.firstName}`} />
-          <DetailRow icon="💰" label={`~$${session.experience.estimatedCost} estimated for two`} />
-          <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 12 }}>
             <PartnerBadge provider={session.experience.provider} />
           </View>
+
+          <View style={s.divider} />
+
+          <DetailRow icon="calendar-outline" label={session.proposedTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} />
+          <DetailRow icon="time-outline" label={session.proposedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} />
+          <DetailRow icon="location-outline" label={session.experience.address || 'Location revealed after deposit'} />
+          <DetailRow icon="people-outline" label={`You & ${session.candidate.firstName}`} />
         </Card>
 
-        {/* Deposit info */}
-        <Card style={{ borderColor: T42.gold + '59' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <Text style={{ fontSize: 22 }}>🛡️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[Fonts.headline, { color: T42.textPrimary }]}>Date deposit</Text>
-              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                ${DATE_DEPOSIT} per person — proves you're both serious. Venue is revealed once both authorize.
-              </Text>
-            </View>
-            <Text style={[Fonts.displaySmall, { color: T42.gold }]}>${DATE_DEPOSIT}</Text>
-          </View>
-        </Card>
-
-        {/* Add-ons marketplace */}
-        <SectionHeader title="Make it unforgettable" />
+        {/* Add-ons */}
+        <SectionHeader title="Add-ons" />
         <Text style={[Fonts.caption, { color: T42.textSecondary, marginBottom: 8 }]}>
-          Optional touches, handled before either of you arrives.
+          Make it even more special
         </Text>
         {sampleAddOns.map(addOn => {
           const sel = selectedAddOns.some(a => a.id === addOn.id);
+          const icon = ADDON_IONICONS[addOn.kind] ?? 'gift-outline';
           return (
             <TouchableOpacity key={addOn.id} onPress={() => toggle(addOn)} activeOpacity={0.7}>
               <Card style={sel ? { borderColor: T42.gold + '99' } : undefined}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <View style={s.addOnIcon}>
-                    <Text style={{ fontSize: 22 }}>{ADDON_ICONS[addOn.kind]}</Text>
+                    <Ionicons name={icon} size={22} color={T42.purple} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[Fonts.subheadline, { color: T42.textPrimary, fontWeight: '600' }]}>{addOn.title}</Text>
                     <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{addOn.detail}</Text>
-                    <PartnerBadge provider={addOn.provider} />
                   </View>
-                  <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
                     <Text style={[Fonts.subheadline, { color: T42.gold, fontWeight: '700' }]}>${addOn.price}</Text>
-                    <Text style={{ fontSize: 22, color: sel ? T42.gold : T42.textSecondary }}>
-                      {sel ? '✅' : '⭕'}
-                    </Text>
+                    <Ionicons name={sel ? 'checkmark-circle' : 'ellipse-outline'} size={22}
+                      color={sel ? T42.gold : T42.textSecondary} />
                   </View>
                 </View>
               </Card>
             </TouchableOpacity>
           );
         })}
-
-        {/* Totals */}
-        <Card>
-          <PriceRow label="Your deposit" amount={DATE_DEPOSIT} />
-          {addOnTotal > 0 && <PriceRow label="Add-ons" amount={addOnTotal} />}
-          <View style={s.divider} />
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Text style={[Fonts.headline, { color: T42.textPrimary }]}>Due now</Text>
-            <Text style={[Fonts.displaySmall, { color: T42.gold }]}>${DATE_DEPOSIT + addOnTotal}</Text>
-          </View>
-          <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 6 }]}>
-            Experience cost (~${session.experience.estimatedCost}) is paid at the venue.
-          </Text>
-        </Card>
       </ScrollView>
 
       <View style={s.cta}>
-        <GoldButton icon="✅" label={`Confirm & Authorize · $${DATE_DEPOSIT + addOnTotal}`}
+        <GoldButton label={loading ? 'Confirming...' : 'Confirm Date'}
           onPress={handleConfirm} loading={loading} />
       </View>
     </View>
   );
 }
 
-function DetailRow({ icon, label }: { icon: string; label: string }) {
+function DetailRow({ icon, label }: { icon: keyof typeof Ionicons.glyphMap; label: string }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
-      <Text style={{ fontSize: 16 }}>{icon}</Text>
+      <Ionicons name={icon} size={16} color={T42.textSecondary} />
       <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>{label}</Text>
-    </View>
-  );
-}
-
-function PriceRow({ label, amount }: { label: string; amount: number }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-      <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>{label}</Text>
-      <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>${amount}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T42.background },
-  content: { padding: 20, paddingBottom: 100, gap: 16 },
+  content: { padding: 20, paddingBottom: 100, gap: 10 },
+  venueIcon: {
+    width: 50, height: 50, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
   divider: { height: 1, backgroundColor: T42.stroke, marginVertical: 12 },
   addOnIcon: {
     width: 46, height: 46, borderRadius: 23,

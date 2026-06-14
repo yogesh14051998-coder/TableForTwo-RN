@@ -1,16 +1,38 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
-import { SectionHeader, TagChip, GoldButton, Card, PartnerBadge } from '../../components/SharedComponents';
+import { GoldButton, Card, IconLabel } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import { fetchCuratedBatch } from '../../services/services';
 import { ALL_CATEGORIES, CATEGORY_META, type ExperienceCategory } from '../../models/types';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
+
+const CATEGORY_ICONS: Record<ExperienceCategory, keyof typeof Ionicons.glyphMap> = {
+  Dinner: 'restaurant',
+  Activity: 'compass',
+  Drinks: 'wine',
+  Custom: 'sparkles',
+};
+
+const CATEGORY_GRADIENTS: Record<ExperienceCategory, [string, string]> = {
+  Dinner: ['#6B3A2A', '#2D1810'],
+  Activity: ['#1A5E3B', '#0D2E1D'],
+  Drinks: ['#4A1942', '#1E0A1A'],
+  Custom: ['#2C3E6B', '#141D35'],
+};
+
+const CATEGORY_SUBTITLES: Record<ExperienceCategory, string> = {
+  Dinner: 'Curated restaurants',
+  Activity: 'Trips, Fun, Memories',
+  Drinks: 'Cocktail bars & lounges',
+  Custom: 'Create your own',
+};
 
 export default function ExperienceSelectionScreen() {
   const nav = useNavigation<Nav>();
@@ -34,51 +56,76 @@ export default function ExperienceSelectionScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.content}>
-        <Text style={[Fonts.displayMedium, { color: T42.textPrimary }]}>Date first. Swipe never.</Text>
+        <Text style={[Fonts.displayMedium, { color: T42.textPrimary }]}>
+          What would you like{'\n'}to do?
+        </Text>
         <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginTop: 6 }]}>
-          Pick the experience and we'll curate who joins you at the table.
+          Choose an experience. We'll find people who love the same kind of date as you.
         </Text>
 
-        {/* Category Grid */}
-        <SectionHeader title="Experience" />
+        {/* 2x2 Category Grid */}
         <View style={s.categoryGrid}>
           {ALL_CATEGORIES.map(cat => {
-            const meta = CATEGORY_META[cat];
             const selected = category === cat;
+            const gradient = CATEGORY_GRADIENTS[cat];
             return (
               <TouchableOpacity key={cat} onPress={() => setCategory(cat)} activeOpacity={0.7}
-                style={[s.categoryCard, {
-                  backgroundColor: selected ? T42.surfaceRaised : T42.surface,
-                  borderColor: selected ? T42.gold : T42.stroke,
-                  borderWidth: selected ? 1.5 : 1,
-                }]}>
-                <View style={s.categoryIcon}>
-                  <Text style={{ fontSize: 22 }}>{meta.icon}</Text>
-                </View>
-                <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 8 }]}>{cat}</Text>
-                <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 4 }]}
-                  numberOfLines={2}>{meta.tagline}</Text>
+                style={[s.categoryCard, selected && s.categorySelected]}>
+                <LinearGradient colors={gradient} style={s.categoryGradient}>
+                  <Ionicons name={CATEGORY_ICONS[cat]} size={36} color="rgba(255,255,255,0.85)" />
+                  <Text style={[Fonts.headline, { color: '#fff', marginTop: 10 }]}>{cat}</Text>
+                  <Text style={[Fonts.caption, { color: 'rgba(255,255,255,0.6)', marginTop: 2 }]}>
+                    {CATEGORY_SUBTITLES[cat]}
+                  </Text>
+                  {selected && (
+                    <View style={s.selectedDot}>
+                      <Ionicons name="checkmark-circle" size={20} color={T42.gold} />
+                    </View>
+                  )}
+                </LinearGradient>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        {/* Location info */}
-        <Card style={{ marginTop: 20 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 24 }}>📍</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[Fonts.headline, { color: T42.textPrimary }]}>Near your area</Text>
-              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                Zipcode {state.currentUser.zipcode} · Within {state.currentUser.lookingFor.maxDistance} miles
+        {/* Budget Range */}
+        <Card style={{ marginTop: 16 }}>
+          <IconLabel icon="wallet-outline" label="Budget Range" color={T42.textSecondary} />
+          <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 4 }]}>$200 — $800</Text>
+        </Card>
+
+        {/* Date & Time */}
+        <Card>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <IconLabel icon="calendar-outline" label="Date & Time" color={T42.textSecondary} />
+              <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 4 }]}>
+                {new Date(Date.now() + 5 * 86400000).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })} — 7:00 PM
               </Text>
             </View>
+            <Ionicons name="chevron-forward" size={20} color={T42.textSecondary} />
+          </View>
+        </Card>
+
+        {/* Location */}
+        <Card>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={s.locationIcon}>
+              <Ionicons name="location" size={22} color={T42.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>Location</Text>
+              <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 2 }]}>
+                {state.currentUser.city || `Zip ${state.currentUser.zipcode}`}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={T42.textSecondary} />
           </View>
         </Card>
       </ScrollView>
 
       <View style={s.cta}>
-        <GoldButton icon="✨" label={loading ? 'Curating...' : 'Curate My 3 Matches'}
+        <GoldButton label={loading ? 'Finding matches...' : 'Find My Matches'}
           onPress={handleFind} loading={loading} />
       </View>
     </View>
@@ -87,12 +134,24 @@ export default function ExperienceSelectionScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T42.background },
-  content: { padding: 20, paddingBottom: 100, gap: 20 },
-  categoryGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 8 },
-  categoryCard: { width: '47%' as any, padding: 14, borderRadius: 18 },
-  categoryIcon: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: T42.surfaceRaised, alignItems: 'center', justifyContent: 'center',
+  content: { padding: 20, paddingBottom: 100, gap: 10 },
+  categoryGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16,
+  },
+  categoryCard: {
+    width: '47%' as any, borderRadius: 18, overflow: 'hidden',
+    borderWidth: 1.5, borderColor: 'transparent',
+  },
+  categorySelected: { borderColor: T42.gold },
+  categoryGradient: {
+    padding: 16, height: 140,
+    justifyContent: 'flex-end',
+  },
+  selectedDot: { position: 'absolute', top: 10, right: 10 },
+  locationIcon: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: T42.gold + '1A',
+    alignItems: 'center', justifyContent: 'center',
   },
   cta: { paddingHorizontal: 20, paddingBottom: 30, paddingTop: 10, backgroundColor: T42.background + 'EB' },
 });
