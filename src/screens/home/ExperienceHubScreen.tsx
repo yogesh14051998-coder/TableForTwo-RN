@@ -9,7 +9,6 @@ import { Card, MatchAvatar } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 import type { DateCommitment, DateBooking } from '../../models/types';
-import { DATE_COMMITMENT_HOLD } from '../../models/types';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
 

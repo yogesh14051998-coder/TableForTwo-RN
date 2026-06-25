@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TextInput, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { Slider as MultiSlider } from '@miblanchard/react-native-slider';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { T42, Fonts } from '../../theme/theme';
@@ -38,7 +39,9 @@ export default function OnboardingScreen() {
   const [ageMax, setAgeMax] = useState(45);
   const [minIncome, setMinIncome] = useState<IncomeRange>('Prefer not to say');
   const [maxDistance, setMaxDistance] = useState(25);
-  const [minHeight, setMinHeight] = useState<HeightRange>('Prefer not to say');
+  const HEIGHT_NO_PREF = 'Prefer not to say' as const;
+  const INCOME_NO_PREF = 'Prefer not to say' as const;
+  const [minHeight, setMinHeight] = useState<HeightRange>(HEIGHT_NO_PREF);
 
   // Background check
   const [bgCheckPaid, setBgCheckPaid] = useState(false);
@@ -243,34 +246,54 @@ export default function OnboardingScreen() {
               ))}
             </View>
 
-            <Text style={s.label}>Age range — {ageMin} to {ageMax}</Text>
-            <View style={{ gap: 4 }}>
-              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>Minimum age: {ageMin}</Text>
-              <Slider minimumValue={18} maximumValue={Math.min(ageMax - 1, 99)} step={1} value={ageMin}
-                onValueChange={v => setAgeMin(Math.round(v))}
-                minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
-                thumbTintColor={T42.gold} />
-              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>Maximum age: {ageMax}</Text>
-              <Slider minimumValue={Math.max(ageMin + 1, 19)} maximumValue={100} step={1} value={ageMax}
-                onValueChange={v => setAgeMax(Math.round(v))}
-                minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
-                thumbTintColor={T42.gold} />
+            <Text style={s.label}>Age range</Text>
+            <View style={s.ageRangeRow}>
+              <View style={s.ageRangeBadge}>
+                <Text style={[Fonts.caption2, { color: T42.textSecondary }]}>From</Text>
+                <Text style={[Fonts.headline, { color: T42.gold }]}>{ageMin}</Text>
+              </View>
+              <View style={s.ageRangeTrack} />
+              <View style={s.ageRangeBadge}>
+                <Text style={[Fonts.caption2, { color: T42.textSecondary }]}>To</Text>
+                <Text style={[Fonts.headline, { color: T42.gold }]}>{ageMax}</Text>
+              </View>
             </View>
+            <MultiSlider
+              value={[ageMin, ageMax]}
+              onValueChange={(vals: number[]) => { setAgeMin(vals[0]); setAgeMax(vals[1]); }}
+              minimumValue={18} maximumValue={100} step={1}
+              minimumTrackTintColor={T42.gold}
+              maximumTrackTintColor={T42.surfaceRaised}
+              thumbTintColor={T42.gold}
+              thumbStyle={{ width: 22, height: 22, borderRadius: 11 }}
+              containerStyle={{ alignSelf: 'stretch' }}
+              trackStyle={{ height: 4, borderRadius: 2 }}
+            />
 
             <Text style={s.label}>Minimum height preference</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
                 {ALL_HEIGHTS.map(h => (
-                  <TagChip key={h} label={h} selected={minHeight === h} onPress={() => setMinHeight(h)} />
+                  <TagChip
+                    key={h}
+                    label={h === HEIGHT_NO_PREF ? 'Any height' : h}
+                    selected={minHeight === h}
+                    onPress={() => setMinHeight(h)}
+                  />
                 ))}
               </View>
             </ScrollView>
 
-            <Text style={s.label}>Minimum income</Text>
+            <Text style={s.label}>Minimum income preference</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
                 {ALL_INCOME_RANGES.map(r => (
-                  <TagChip key={r} label={r} selected={minIncome === r} onPress={() => setMinIncome(r)} />
+                  <TagChip
+                    key={r}
+                    label={r === INCOME_NO_PREF ? 'Any income' : r}
+                    selected={minIncome === r}
+                    onPress={() => setMinIncome(r)}
+                  />
                 ))}
               </View>
             </ScrollView>
@@ -389,6 +412,16 @@ const s = StyleSheet.create({
   label: { ...Fonts.subheadline, color: T42.textSecondary, marginTop: 22 },
   chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
   ageRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 8 },
+  ageRangeRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginTop: 10, marginBottom: 4,
+  },
+  ageRangeBadge: {
+    alignItems: 'center', minWidth: 52,
+    backgroundColor: T42.surfaceRaised, borderRadius: 12,
+    paddingVertical: 8, paddingHorizontal: 14,
+  },
+  ageRangeTrack: { flex: 1, height: 1, backgroundColor: T42.stroke, marginHorizontal: 8 },
   input: {
     backgroundColor: T42.surfaceRaised, color: T42.textPrimary,
     padding: 14, borderRadius: 14, marginTop: 8, fontSize: 15,

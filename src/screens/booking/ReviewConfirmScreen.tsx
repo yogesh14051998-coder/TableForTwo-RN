@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,6 +30,16 @@ export default function ReviewConfirmScreen() {
   const [loading, setLoading] = useState(false);
   const [confirmed, setConfirmed] = useState<DateBooking | null>(null);
   const [depositPaid, setDepositPaid] = useState(false);
+
+  // After the success screen shows, navigate home after 3 seconds
+  useEffect(() => {
+    if (confirmed && depositPaid) {
+      const timer = setTimeout(() => {
+        nav.navigate('HomeTabs');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirmed, depositPaid]);
 
   const toggle = (addOn: AddOn) => {
     setSelectedAddOns(prev =>
@@ -105,6 +115,17 @@ export default function ReviewConfirmScreen() {
             ))}
           </Card>
         )}
+
+        <TouchableOpacity
+          style={s.goHomeBtn}
+          onPress={() => nav.navigate('HomeTabs')}
+          activeOpacity={0.8}
+        >
+          <Text style={[Fonts.headline, { color: T42.onGold }]}>Back to Home</Text>
+        </TouchableOpacity>
+        <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 8 }]}>
+          Returning automatically in a moment…
+        </Text>
       </View>
     );
   }
@@ -311,6 +332,10 @@ const s = StyleSheet.create({
     width: 96, height: 96, borderRadius: 48,
     backgroundColor: T42.success + '20',
     alignItems: 'center', justifyContent: 'center',
+  },
+  goHomeBtn: {
+    marginTop: 28, paddingHorizontal: 36, paddingVertical: 14,
+    borderRadius: 50, backgroundColor: T42.gold,
   },
   cta: {
     paddingHorizontal: 20, paddingBottom: 30, paddingTop: 10,
