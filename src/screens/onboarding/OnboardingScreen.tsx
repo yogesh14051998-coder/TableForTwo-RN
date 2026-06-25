@@ -35,8 +35,8 @@ export default function OnboardingScreen() {
 
   // Looking for
   const [lookingForGender, setLookingForGender] = useState<Gender[]>([]);
-  const [ageMin, setAgeMin] = useState(25);
-  const [ageMax, setAgeMax] = useState(45);
+  const [ageMin, setAgeMin] = useState(21);
+  const [ageMax, setAgeMax] = useState(65);
   const [minIncome, setMinIncome] = useState<IncomeRange>('Prefer not to say');
   const [maxDistance, setMaxDistance] = useState(25);
   const HEIGHT_NO_PREF = 'Prefer not to say' as const;
