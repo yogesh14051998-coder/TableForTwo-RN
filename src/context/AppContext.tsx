@@ -7,8 +7,6 @@ import {
 } from '../models/types';
 import {
   currentUser as defaultUser,
-  upcomingBooking,
-  pastBookings as defaultPast,
   makeDateCommitment,
 } from '../data/sampleData';
 import { trackEvent } from '../services/services';
@@ -33,8 +31,8 @@ const initialState: AppState = {
   dateIntents: [],
   activeCommitment: null,
   liveDate: null,
-  upcomingBookings: [upcomingBooking],
-  pastBookings: defaultPast,
+  upcomingBookings: [],
+  pastBookings: [],
   subscription: 'Free',
   consent: { shareAnonymizedUsage: false, personalizedRecommendations: false },
 };
