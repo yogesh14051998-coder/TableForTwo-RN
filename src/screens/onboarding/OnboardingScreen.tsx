@@ -7,75 +7,81 @@ import { T42, Fonts } from '../../theme/theme';
 import { TagChip, GoldButton, GhostButton, Card } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
 import {
-  ALL_GENDERS, ALL_INTERESTS, INTEREST_LIMIT,
-  BACKGROUND_CHECK_FEE, PAID_TIERS, TIER_INFO,
-  type Gender, type InterestTag, type UserProfile, type SubscriptionTier,
+  ALL_GENDERS, SHORT_GENDERS, ALL_INTERESTS, INTEREST_LIMIT, ALL_HEIGHTS, ALL_INCOME_RANGES, ALL_JOB_TYPES,
+  BACKGROUND_CHECK_FEE,
+  type Gender, type InterestTag, type UserProfile, type HeightRange, type IncomeRange, type JobType,
 } from '../../models/types';
 
 const { width } = Dimensions.get('window');
 
-type Step = 'welcome' | 'personalize' | 'backgroundCheck' | 'choosePlan';
-const STEPS: Step[] = ['welcome', 'personalize', 'backgroundCheck', 'choosePlan'];
+type Step = 'welcome' | 'about' | 'lookingFor' | 'backgroundCheck';
+const STEPS: Step[] = ['welcome', 'about', 'lookingFor', 'backgroundCheck'];
 
 export default function OnboardingScreen() {
-  const { completeOnboarding, setSubscription } = useApp();
+  const { completeOnboarding } = useApp();
   const [step, setStep] = useState<Step>('welcome');
 
+  // About you
   const [firstName, setFirstName] = useState('');
-  const [age, setAge] = useState(28);
+  const [age, setAge] = useState(30);
   const [gender, setGender] = useState<Gender>('Woman');
+  const [height, setHeight] = useState<HeightRange>('5\'4"–5\'6"');
+  const [income, setIncome] = useState<IncomeRange>('Prefer not to say');
+  const [jobType, setJobType] = useState<JobType>('9 to 5');
   const [zipcode, setZipcode] = useState('');
-  const [lookingForGender, setLookingForGender] = useState<Gender[]>([]);
-  const [ageRange, setAgeRange] = useState(30);
+  const [bio, setBio] = useState('');
   const [interests, setInterests] = useState<InterestTag[]>([]);
+
+  // Looking for
+  const [lookingForGender, setLookingForGender] = useState<Gender[]>([]);
+  const [ageMin, setAgeMin] = useState(25);
+  const [ageMax, setAgeMax] = useState(45);
+  const [minIncome, setMinIncome] = useState<IncomeRange>('Prefer not to say');
+  const [maxDistance, setMaxDistance] = useState(25);
+  const [minHeight, setMinHeight] = useState<HeightRange>('Prefer not to say');
+
+  // Background check
   const [bgCheckPaid, setBgCheckPaid] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<SubscriptionTier | null>(null);
 
   const idx = STEPS.indexOf(step);
 
-  const toggleLookingForGender = (g: Gender) => {
-    setLookingForGender(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
-  };
+  const toggleGender = (g: Gender) => setLookingForGender(prev =>
+    prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
-  const toggleInterest = (tag: InterestTag) => {
-    setInterests(prev =>
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : prev.length < INTEREST_LIMIT ? [...prev, tag] : prev
-    );
-  };
+  const toggleInterest = (tag: InterestTag) => setInterests(prev =>
+    prev.includes(tag) ? prev.filter(t => t !== tag) : prev.length < INTEREST_LIMIT ? [...prev, tag] : prev);
 
   const canContinue = (() => {
-    switch (step) {
-      case 'welcome': return true;
-      case 'personalize': return firstName.trim().length > 0 && zipcode.trim().length >= 5 && lookingForGender.length > 0 && interests.length >= 1;
-      case 'backgroundCheck': return bgCheckPaid;
-      case 'choosePlan': return selectedPlan !== null;
-    }
+    if (step === 'about') return firstName.trim().length > 0 && zipcode.trim().length >= 5 && interests.length >= 1;
+    if (step === 'lookingFor') return lookingForGender.length > 0;
+    if (step === 'backgroundCheck') return bgCheckPaid;
+    return true;
   })();
 
   const advance = () => {
-    if (step === 'choosePlan' && selectedPlan) {
+    if (step === 'backgroundCheck') {
       const user: UserProfile = {
         id: Math.random().toString(36).slice(2),
-        firstName, age, gender,
+        firstName, age, gender, height,
         zipcode, city: '',
         profession: '',
-        jobType: '9 to 5',
-        income: 'Prefer not to say',
+        jobType,
+        income,
         dressStyle: 'Smart casual',
-        bio: '', photos: [],
+        bio,
+        photos: [],
         interests,
         lookingFor: {
           gender: lookingForGender,
-          ageRange: [Math.max(18, ageRange - 5), ageRange + 5],
-          minIncome: 'Prefer not to say',
+          ageRange: [ageMin, ageMax],
+          minIncome,
           jobTypes: [],
-          maxDistance: 25,
+          maxDistance,
+          minHeight: minHeight === 'Prefer not to say' ? undefined : minHeight,
         },
         backgroundCheck: 'clear',
+        backgroundCheckNotes: 'Verified — no criminal record. Check completed via Checkr.',
       };
-      setSubscription(selectedPlan);
       completeOnboarding(user);
       return;
     }
@@ -95,24 +101,31 @@ export default function OnboardingScreen() {
             style={s.welcomeLogo}
             resizeMode="contain"
           />
-          <Text style={s.welcomeTagline}>From match to memory.</Text>
+          <Text style={s.welcomeTagline}>Where real connections begin.</Text>
           <Text style={[Fonts.displayMedium, { color: T42.textPrimary, textAlign: 'center', marginTop: 16 }]}>
-            Better Dates.{'\n'}Deeper Connections.
+            No swiping.{'\n'}No endless messaging.{'\n'}Just great dates.
           </Text>
-          <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 12, paddingHorizontal: 20 }]}>
-            Experience-based dating designed for real-life connections.
+          <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 14, paddingHorizontal: 20, lineHeight: 22 }]}>
+            Table for 2 matches you with 2–3 people who fit your exact preferences — then locks in the date.
           </Text>
+
+          <View style={s.pillRow}>
+            {['AI-curated matches', 'Background verified', 'Date in days, not weeks'].map(t => (
+              <View key={t} style={s.pill}>
+                <Ionicons name="checkmark-circle" size={14} color={T42.gold} />
+                <Text style={[Fonts.caption, { color: T42.gold, marginLeft: 5 }]}>{t}</Text>
+              </View>
+            ))}
+          </View>
 
           <View style={{ width: '100%', gap: 12, marginTop: 32 }}>
-            <GoldButton label="Get Started" onPress={() => setStep('personalize')} />
-            <GhostButton label="Log In" onPress={() => setStep('personalize')} />
+            <GoldButton label="Create Your Profile" onPress={() => setStep('about')} />
+            <GhostButton label="Log In" onPress={() => setStep('about')} />
           </View>
 
-          <View style={s.welcomeFooter}>
-            <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', letterSpacing: 1 }]}>
-              Intentional. Inclusive. Experience-Driven.
-            </Text>
-          </View>
+          <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 32, letterSpacing: 1 }]}>
+            Inclusive · Intentional · Experience-Driven
+          </Text>
         </ScrollView>
       </View>
     );
@@ -124,58 +137,85 @@ export default function OnboardingScreen() {
       <View style={s.progressTrack}>
         <LinearGradient colors={[T42.gold, T42.goldDeep]}
           start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={[s.progressFill, { width: `${((idx) / (STEPS.length - 1)) * 100}%` as any }]} />
+          style={[s.progressFill, { width: `${(idx / (STEPS.length - 1)) * 100}%` as any }]} />
       </View>
+      <Text style={[Fonts.caption, { color: T42.textSecondary, textAlign: 'center', marginTop: 8 }]}>
+        Step {idx} of {STEPS.length - 1}
+      </Text>
 
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
-        {/* PERSONALIZE */}
-        {step === 'personalize' && (
+
+        {/* ── ABOUT YOU ── */}
+        {step === 'about' && (
           <View>
             <Image source={require('../../../assets/logo.jpeg')} style={s.smallLogo} resizeMode="contain" />
-            <Text style={[Fonts.displayMedium, { color: T42.textPrimary, marginTop: 12 }]}>
-              Let's personalize{'\n'}your experience
-            </Text>
-            <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginTop: 8 }]}>
-              This helps us create better matches and date ideas for you.
+            <Text style={[Fonts.displayMedium, { color: T42.textPrimary, marginTop: 12 }]}>Tell us about you</Text>
+            <Text style={[Fonts.body, { color: T42.textSecondary, marginTop: 6 }]}>
+              Your profile is shown to potential matches. Be honest — it improves your results.
             </Text>
 
-            <Text style={s.fieldLabel}>First name</Text>
+            <Text style={s.label}>First name</Text>
             <TextInput value={firstName} onChangeText={setFirstName} placeholder="Your name"
               placeholderTextColor={T42.textSecondary + '80'} style={s.input} />
 
-            <Text style={s.fieldLabel}>I am</Text>
-            <View style={s.chipRow}>
-              {ALL_GENDERS.map(g => (
+            <Text style={s.label}>I identify as</Text>
+            <View style={s.chipGrid}>
+              {SHORT_GENDERS.map(g => (
                 <TagChip key={g} label={g} selected={gender === g} onPress={() => setGender(g)} />
               ))}
             </View>
 
-            <Text style={s.fieldLabel}>Interested in</Text>
-            <View style={s.chipRow}>
-              {ALL_GENDERS.map(g => (
-                <TagChip key={g} label={g === 'Man' ? 'Men' : g === 'Woman' ? 'Women' : g}
-                  selected={lookingForGender.includes(g)}
-                  onPress={() => toggleLookingForGender(g)} />
+            <Text style={s.label}>My age</Text>
+            <View style={s.ageRow}>
+              <Text style={[Fonts.displaySmall, { color: T42.gold }]}>{age}</Text>
+              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>years old</Text>
+            </View>
+            <Slider minimumValue={18} maximumValue={100} step={1} value={age}
+              onValueChange={v => setAge(Math.round(v))}
+              minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
+              thumbTintColor={T42.gold} />
+
+            <Text style={s.label}>My height</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
+                {ALL_HEIGHTS.map(h => (
+                  <TagChip key={h} label={h} selected={height === h} onPress={() => setHeight(h)} />
+                ))}
+              </View>
+            </ScrollView>
+
+            <Text style={s.label}>Annual income</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
+                {ALL_INCOME_RANGES.map(r => (
+                  <TagChip key={r} label={r} selected={income === r} onPress={() => setIncome(r)} />
+                ))}
+              </View>
+            </ScrollView>
+
+            <Text style={s.label}>Work style</Text>
+            <View style={s.chipGrid}>
+              {['9 to 5', 'Freelance', 'Business owner', 'Remote'].map(j => (
+                <TagChip key={j} label={j} selected={jobType === j as JobType}
+                  onPress={() => setJobType(j as JobType)} />
               ))}
             </View>
 
-            <Text style={s.fieldLabel}>Age Range — {Math.max(18, ageRange - 5)} to {ageRange + 5}</Text>
-            <Slider minimumValue={23} maximumValue={65} step={1} value={ageRange}
-              onValueChange={v => setAgeRange(Math.round(v))}
-              minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
-              thumbTintColor={T42.gold} style={{ marginTop: 4 }} />
-
-            <Text style={s.fieldLabel}>Location</Text>
-            <TextInput value={zipcode} onChangeText={setZipcode} placeholder="Zip code (e.g. 33311)"
+            <Text style={s.label}>My zip code</Text>
+            <TextInput value={zipcode} onChangeText={setZipcode} placeholder="e.g. 33311"
               placeholderTextColor={T42.textSecondary + '80'} keyboardType="number-pad"
               maxLength={5} style={s.input} />
 
-            <Text style={[s.fieldLabel, { marginTop: 24 }]}>
-              What are you into? (Select up to {INTEREST_LIMIT})
+            <Text style={s.label}>A little about me</Text>
+            <TextInput value={bio} onChangeText={setBio}
+              placeholder="What makes you who you are? (optional)"
+              placeholderTextColor={T42.textSecondary + '80'}
+              multiline numberOfLines={3} style={[s.input, { height: 80, textAlignVertical: 'top' }]} />
+
+            <Text style={[s.label, { marginTop: 24 }]}>
+              Interests (pick up to {INTEREST_LIMIT})
             </Text>
-            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-              {interests.length} of {INTEREST_LIMIT} chosen
-            </Text>
+            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{interests.length} of {INTEREST_LIMIT} chosen</Text>
             <View style={s.chipGrid}>
               {ALL_INTERESTS.map(tag => (
                 <TagChip key={tag} label={tag} selected={interests.includes(tag)}
@@ -185,25 +225,115 @@ export default function OnboardingScreen() {
           </View>
         )}
 
-        {/* BACKGROUND CHECK */}
+        {/* ── LOOKING FOR ── */}
+        {step === 'lookingFor' && (
+          <View>
+            <Text style={[Fonts.displayMedium, { color: T42.textPrimary }]}>Who are you looking for?</Text>
+            <Text style={[Fonts.body, { color: T42.textSecondary, marginTop: 6, lineHeight: 22 }]}>
+              Be specific. Our AI only shows you profiles that match these preferences exactly — no wasted time.
+            </Text>
+
+            <Text style={s.label}>Interested in</Text>
+            <View style={s.chipGrid}>
+              {SHORT_GENDERS.filter(g => g !== 'Prefer not to say').map(g => (
+                <TagChip key={g}
+                  label={g === 'Man' ? 'Men' : g === 'Woman' ? 'Women' : g}
+                  selected={lookingForGender.includes(g)}
+                  onPress={() => toggleGender(g)} />
+              ))}
+            </View>
+
+            <Text style={s.label}>Age range — {ageMin} to {ageMax}</Text>
+            <View style={{ gap: 4 }}>
+              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>Minimum age: {ageMin}</Text>
+              <Slider minimumValue={18} maximumValue={Math.min(ageMax - 1, 99)} step={1} value={ageMin}
+                onValueChange={v => setAgeMin(Math.round(v))}
+                minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
+                thumbTintColor={T42.gold} />
+              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>Maximum age: {ageMax}</Text>
+              <Slider minimumValue={Math.max(ageMin + 1, 19)} maximumValue={100} step={1} value={ageMax}
+                onValueChange={v => setAgeMax(Math.round(v))}
+                minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
+                thumbTintColor={T42.gold} />
+            </View>
+
+            <Text style={s.label}>Minimum height preference</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
+                {ALL_HEIGHTS.map(h => (
+                  <TagChip key={h} label={h} selected={minHeight === h} onPress={() => setMinHeight(h)} />
+                ))}
+              </View>
+            </ScrollView>
+
+            <Text style={s.label}>Minimum income</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 4 }}>
+                {ALL_INCOME_RANGES.map(r => (
+                  <TagChip key={r} label={r} selected={minIncome === r} onPress={() => setMinIncome(r)} />
+                ))}
+              </View>
+            </ScrollView>
+
+            <Text style={s.label}>Max travel distance — {maxDistance} miles</Text>
+            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
+              ±20% tolerance applied by the matching algorithm
+            </Text>
+            <Slider minimumValue={5} maximumValue={100} step={5} value={maxDistance}
+              onValueChange={v => setMaxDistance(Math.round(v))}
+              minimumTrackTintColor={T42.gold} maximumTrackTintColor={T42.surfaceRaised}
+              thumbTintColor={T42.gold} style={{ marginTop: 8 }} />
+
+            <Card style={{ marginTop: 20, borderColor: T42.purple + '60' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+                <Ionicons name="sparkles" size={20} color={T42.purple} style={{ marginTop: 2 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.headline, { color: T42.textPrimary }]}>How our matching works</Text>
+                  <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 4, lineHeight: 18 }]}>
+                    You will receive 2–3 curated profiles from people who meet your exact criteria. No browsing, no swiping — our AI does the work.
+                  </Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
+
+        {/* ── BACKGROUND CHECK ── */}
         {step === 'backgroundCheck' && (
           <View style={s.center}>
             <Ionicons name="shield-checkmark" size={64} color={T42.gold} />
             <Text style={[Fonts.displayMedium, { color: T42.textPrimary, marginTop: 16, textAlign: 'center' }]}>
               Background Verification
             </Text>
-            <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 12 }]}>
-              Everyone on Table for 2 passes a verified background check before their first date.
-              This keeps our community safe and trustworthy.
+            <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 12, lineHeight: 22 }]}>
+              Every member of Table for 2 completes a background check before their first date.
+              Results are shown on your profile — not to gatekeep, but so matches know who they are meeting.
             </Text>
+
             <Card style={s.feeCard}>
               <Ionicons name="shield-checkmark-outline" size={32} color={T42.gold} />
               <Text style={[Fonts.headline, { color: T42.textPrimary, marginTop: 8 }]}>One-time fee</Text>
               <Text style={[Fonts.displayMedium, { color: T42.gold, marginTop: 4 }]}>${BACKGROUND_CHECK_FEE}</Text>
-              <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 8, textAlign: 'center' }]}>
-                Verified by a licensed third-party provider.{'\n'}Results typically within 24 hours.
+              <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 8, textAlign: 'center', lineHeight: 18 }]}>
+                Verified by a licensed third-party provider (Checkr).{'\n'}
+                Results typically within 24 hours.
               </Text>
             </Card>
+
+            <Card style={{ marginTop: 16, width: '100%', borderColor: T42.purple + '40' }}>
+              <Text style={[Fonts.headline, { color: T42.textPrimary, marginBottom: 10 }]}>What shows on your profile</Text>
+              {[
+                { icon: 'checkmark-circle-outline' as const, label: '"Background Verified" badge' },
+                { icon: 'document-text-outline' as const, label: 'A brief plain-English summary visible to your matches' },
+                { icon: 'lock-closed-outline' as const, label: 'No raw criminal records — your privacy is protected' },
+              ].map(item => (
+                <View key={item.label} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name={item.icon} size={16} color={T42.gold} style={{ marginTop: 1 }} />
+                  <Text style={[Fonts.caption, { color: T42.textSecondary, flex: 1, lineHeight: 18 }]}>{item.label}</Text>
+                </View>
+              ))}
+            </Card>
+
             <View style={{ marginTop: 16, width: '100%' }}>
               {bgCheckPaid ? (
                 <View style={s.verifiedBadge}>
@@ -211,97 +341,22 @@ export default function OnboardingScreen() {
                   <Text style={[Fonts.headline, { color: T42.success }]}>Verified — You're all set</Text>
                 </View>
               ) : (
-                <GoldButton
-                  label={`Pay $${BACKGROUND_CHECK_FEE} & Verify`}
-                  onPress={() => setBgCheckPaid(true)}
-                />
+                <GoldButton label={`Pay $${BACKGROUND_CHECK_FEE} & Verify`} onPress={() => setBgCheckPaid(true)} />
               )}
-            </View>
-          </View>
-        )}
-
-        {/* CHOOSE PLAN */}
-        {step === 'choosePlan' && (
-          <View>
-            <View style={{ alignItems: 'center' }}>
-              <Ionicons name="diamond" size={48} color={T42.gold} />
-              <Text style={[Fonts.displayMedium, { color: T42.textPrimary, marginTop: 12, textAlign: 'center' }]}>
-                Choose Your Plan
-              </Text>
-              <Text style={[Fonts.subheadline, { color: T42.textSecondary, textAlign: 'center', marginTop: 8 }]}>
-                Select a membership to unlock curated matches and premium experiences.
-              </Text>
-            </View>
-
-            <View style={{ gap: 14, marginTop: 24 }}>
-              {PAID_TIERS.map(tier => {
-                const info = TIER_INFO[tier];
-                const isSelected = selectedPlan === tier;
-                const tierIcon = tier === 'Silver' ? 'medal-outline' as const
-                  : tier === 'Gold' ? 'trophy-outline' as const
-                  : 'diamond-outline' as const;
-                const tierColor = tier === 'Silver' ? '#C0C0C0'
-                  : tier === 'Gold' ? T42.gold
-                  : '#B9F2FF';
-
-                return (
-                  <TouchableOpacity key={tier} onPress={() => setSelectedPlan(tier)} activeOpacity={0.8}>
-                    <Card style={[
-                      isSelected && { borderColor: tierColor, borderWidth: 2 },
-                      tier === 'Gold' && !isSelected && { borderColor: T42.gold + '40' },
-                    ]}>
-                      {tier === 'Gold' && (
-                        <View style={s.popularBadge}>
-                          <Text style={[Fonts.caption2, { color: T42.onGold }]}>MOST POPULAR</Text>
-                        </View>
-                      )}
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                        <View style={[s.tierIconWrap, { backgroundColor: tierColor + '1A' }]}>
-                          <Ionicons name={tierIcon} size={28} color={tierColor} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <Text style={[Fonts.headline, { color: T42.textPrimary, fontSize: 18 }]}>{tier}</Text>
-                          <Text style={[Fonts.caption, { color: T42.textSecondary }]}>
-                            {info.matchesPerBatch} matches per batch
-                          </Text>
-                        </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                          <Text style={[Fonts.displaySmall, { color: tierColor }]}>${info.price}</Text>
-                          <Text style={[Fonts.caption, { color: T42.textSecondary }]}>/month</Text>
-                        </View>
-                      </View>
-                      <View style={{ gap: 6, marginTop: 14 }}>
-                        {info.perks.map(p => (
-                          <View key={p} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <Ionicons name="checkmark-circle" size={16} color={tierColor} />
-                            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{p}</Text>
-                          </View>
-                        ))}
-                      </View>
-                      {isSelected && (
-                        <View style={[s.selectedIndicator, { backgroundColor: tierColor }]}>
-                          <Ionicons name="checkmark" size={16} color={T42.onGold} />
-                          <Text style={[Fonts.caption2, { color: T42.onGold, fontWeight: '700' }]}>SELECTED</Text>
-                        </View>
-                      )}
-                    </Card>
-                  </TouchableOpacity>
-                );
-              })}
             </View>
           </View>
         )}
       </ScrollView>
 
       <View style={s.footer}>
-        {step !== 'welcome' && (
-          <View style={{ width: 100 }}>
+        {idx > 1 && (
+          <View style={{ width: 90 }}>
             <GhostButton label="Back" onPress={back} />
           </View>
         )}
         <View style={{ flex: 1 }}>
           <GoldButton
-            label={step === 'choosePlan' ? 'Start Dating' : 'Continue'}
+            label={step === 'backgroundCheck' ? 'Enter Table for 2' : 'Continue'}
             onPress={advance} disabled={!canContinue} />
         </View>
       </View>
@@ -312,28 +367,33 @@ export default function OnboardingScreen() {
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: T42.background },
   welcomeContent: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    padding: 30, paddingTop: 80, paddingBottom: 40,
+    flexGrow: 1, alignItems: 'center', justifyContent: 'center',
+    padding: 28, paddingTop: 80, paddingBottom: 50,
   },
   welcomeLogo: { width: width * 0.55, height: width * 0.45 },
   welcomeTagline: {
-    color: T42.gold, fontSize: 18, fontFamily: 'serif',
-    fontStyle: 'italic', marginTop: 16, letterSpacing: 1,
+    color: T42.gold, fontSize: 17, fontFamily: 'serif',
+    fontStyle: 'italic', marginTop: 16, letterSpacing: 0.5,
   },
-  welcomeFooter: { alignItems: 'center', marginTop: 40 },
-  smallLogo: { width: 60, height: 50 },
-  progressTrack: { height: 3, backgroundColor: T42.surfaceRaised, marginHorizontal: 24, marginTop: 60 },
+  pillRow: { gap: 8, marginTop: 24, alignItems: 'flex-start', width: '100%' },
+  pill: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 50,
+    backgroundColor: T42.gold + '14', borderWidth: 1, borderColor: T42.gold + '30',
+  },
+  progressTrack: { height: 3, backgroundColor: T42.surfaceRaised, marginHorizontal: 24, marginTop: 56 },
   progressFill: { height: 3, borderRadius: 2 },
-  content: { padding: 24, paddingBottom: 100 },
-  center: { alignItems: 'center', paddingTop: 32 },
-  fieldLabel: { ...Fonts.subheadline, color: T42.textSecondary, marginTop: 20 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
+  content: { padding: 24, paddingBottom: 110 },
+  center: { alignItems: 'center', paddingTop: 24 },
+  smallLogo: { width: 56, height: 46 },
+  label: { ...Fonts.subheadline, color: T42.textSecondary, marginTop: 22 },
+  chipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
+  ageRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 8 },
   input: {
     backgroundColor: T42.surfaceRaised, color: T42.textPrimary,
     padding: 14, borderRadius: 14, marginTop: 8, fontSize: 15,
   },
-  footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 24, paddingBottom: 34, paddingTop: 8 },
+  footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 24, paddingBottom: 34, paddingTop: 10 },
   feeCard: {
     marginTop: 24, padding: 20, borderRadius: 20, width: '100%',
     borderColor: T42.gold + '59', alignItems: 'center',
@@ -341,18 +401,5 @@ const s = StyleSheet.create({
   verifiedBadge: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 15,
-  },
-  tierIconWrap: {
-    width: 52, height: 52, borderRadius: 16,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  popularBadge: {
-    position: 'absolute', top: -1, right: 16,
-    backgroundColor: T42.gold, paddingHorizontal: 10, paddingVertical: 3,
-    borderBottomLeftRadius: 8, borderBottomRightRadius: 8,
-  },
-  selectedIndicator: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, marginTop: 14, paddingVertical: 8, borderRadius: 50,
   },
 });

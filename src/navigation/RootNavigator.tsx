@@ -7,9 +7,9 @@ import { useApp } from '../context/AppContext';
 
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import ExperienceHubScreen from '../screens/home/ExperienceHubScreen';
-import ExperienceSelectionScreen from '../screens/experience/ExperienceSelectionScreen';
+import DateIntentScreen from '../screens/intent/DateIntentScreen';
 import CuratedMatchScreen from '../screens/matches/CuratedMatchScreen';
-import ChatScreen from '../screens/chat/ChatScreen';
+import CommitmentScreen from '../screens/commitment/CommitmentScreen';
 import ReviewConfirmScreen from '../screens/booking/ReviewConfirmScreen';
 import LiveDateSafetyScreen from '../screens/safety/LiveDateSafetyScreen';
 import FeedbackScreen from '../screens/feedback/FeedbackScreen';
@@ -17,14 +17,14 @@ import MessagesScreen from '../screens/messages/MessagesScreen';
 import BookingsScreen from '../screens/bookings/BookingsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
-import type { CuratedMatchBatch, MatchChatSession, DateBooking } from '../models/types';
+import type { CuratedMatchBatch, DateCommitment, DateBooking } from '../models/types';
 
 export type MainStackParams = {
   HomeTabs: undefined;
-  ExperienceSelection: { preselect?: string } | undefined;
+  DateIntent: undefined;
   CuratedMatch: { batch: CuratedMatchBatch };
-  Chat: { session: MatchChatSession };
-  ReviewConfirm: { session: MatchChatSession };
+  Commitment: { commitment: DateCommitment };
+  ReviewConfirm: { commitment: DateCommitment };
   LiveDateSafety: { booking: DateBooking };
   Feedback: { booking: DateBooking };
 };
@@ -40,11 +40,11 @@ const screenOptions = {
 };
 
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
-  Home: { active: 'home', inactive: 'home-outline' },
-  Matches: { active: 'heart', inactive: 'heart-outline' },
-  Experience: { active: 'compass', inactive: 'compass-outline' },
+  Home:     { active: 'home',        inactive: 'home-outline' },
+  Discover: { active: 'heart',       inactive: 'heart-outline' },
+  Bookings: { active: 'compass',     inactive: 'compass-outline' },
   Messages: { active: 'chatbubble', inactive: 'chatbubble-outline' },
-  Profile: { active: 'person', inactive: 'person-outline' },
+  Profile:  { active: 'person',      inactive: 'person-outline' },
 };
 
 function HomeTabs() {
@@ -72,10 +72,10 @@ function HomeTabs() {
     >
       <Tab.Screen name="Home" component={ExperienceHubScreen}
         options={{ headerTitle: 'Table for 2' }} />
-      <Tab.Screen name="Matches" component={ExperienceSelectionScreen}
-        options={{ headerTitle: 'Find Matches' }} />
-      <Tab.Screen name="Experience" component={BookingsScreen}
-        options={{ headerTitle: 'Bookings' }} />
+      <Tab.Screen name="Discover" component={DateIntentScreen}
+        options={{ headerTitle: 'Plan a Date' }} />
+      <Tab.Screen name="Bookings" component={BookingsScreen}
+        options={{ headerTitle: 'My Dates' }} />
       <Tab.Screen name="Messages" component={MessagesScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen}
         options={{ headerTitle: 'My Profile' }} />
@@ -93,12 +93,12 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="HomeTabs" component={HomeTabs} options={{ headerShown: false }} />
-      <Stack.Screen name="ExperienceSelection" component={ExperienceSelectionScreen}
-        options={{ title: 'Choose Experience' }} />
+      <Stack.Screen name="DateIntent" component={DateIntentScreen}
+        options={{ title: 'Plan a Date' }} />
       <Stack.Screen name="CuratedMatch" component={CuratedMatchScreen}
         options={{ title: 'Your Matches' }} />
-      <Stack.Screen name="Chat" component={ChatScreen}
-        options={({ route }) => ({ title: route.params.session.candidate.firstName })} />
+      <Stack.Screen name="Commitment" component={CommitmentScreen}
+        options={({ route }) => ({ title: route.params.commitment.candidate.firstName })} />
       <Stack.Screen name="ReviewConfirm" component={ReviewConfirmScreen}
         options={{ title: 'Confirm Date' }} />
       <Stack.Screen name="LiveDateSafety" component={LiveDateSafetyScreen}

@@ -110,7 +110,7 @@ export default function ProfileScreen() {
                   <Text style={[Fonts.subheadline, { color: T42.gold, fontWeight: '600' }]}>Pending</Text>
                 </View>
               )}
-              {user.backgroundCheck === 'none' && (
+              {user.backgroundCheck === 'not_started' && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <Ionicons name="close-circle-outline" size={16} color={T42.danger} />
                   <Text style={[Fonts.subheadline, { color: T42.danger, fontWeight: '600' }]}>Not started</Text>

@@ -1,10 +1,16 @@
 import React, { createContext, useContext, useReducer, useCallback, type ReactNode } from 'react';
 import {
-  UserProfile, MatchChatSession, DateBooking, SubscriptionTier,
-  ConsentSettings, MatchCandidate, CuratedMatchBatch,
-  DECISION_WINDOW_MS, type PaymentSplit,
+  UserProfile, DateBooking, SubscriptionTier,
+  ConsentSettings, MatchCandidate, Experience,
+  DateIntent, DateCommitment,
+  type PaymentSplit,
 } from '../models/types';
-import { currentUser as defaultUser, upcomingBooking, pastBookings as defaultPast } from '../data/sampleData';
+import {
+  currentUser as defaultUser,
+  upcomingBooking,
+  pastBookings as defaultPast,
+  makeDateCommitment,
+} from '../data/sampleData';
 import { trackEvent } from '../services/services';
 
 // ── State ──
@@ -12,11 +18,11 @@ import { trackEvent } from '../services/services';
 interface AppState {
   currentUser: UserProfile;
   hasCompletedOnboarding: boolean;
-  activeChatSession: MatchChatSession | null;
+  dateIntents: DateIntent[];
+  activeCommitment: DateCommitment | null;
   liveDate: DateBooking | null;
   upcomingBookings: DateBooking[];
   pastBookings: DateBooking[];
-  archivedChats: MatchChatSession[];
   subscription: SubscriptionTier;
   consent: ConsentSettings;
 }
@@ -24,11 +30,11 @@ interface AppState {
 const initialState: AppState = {
   currentUser: defaultUser,
   hasCompletedOnboarding: false,
-  activeChatSession: null,
+  dateIntents: [],
+  activeCommitment: null,
   liveDate: null,
   upcomingBookings: [upcomingBooking],
   pastBookings: defaultPast,
-  archivedChats: [],
   subscription: 'Free',
   consent: { shareAnonymizedUsage: false, personalizedRecommendations: false },
 };
@@ -37,8 +43,11 @@ const initialState: AppState = {
 
 type Action =
   | { type: 'COMPLETE_ONBOARDING'; user: UserProfile }
-  | { type: 'START_CHAT'; session: MatchChatSession }
-  | { type: 'UPDATE_CHAT'; session: MatchChatSession }
+  | { type: 'POST_DATE_INTENT'; intent: DateIntent }
+  | { type: 'CREATE_COMMITMENT'; commitment: DateCommitment }
+  | { type: 'PLACE_YOUR_HOLD' }
+  | { type: 'PLACE_THEIR_HOLD' }
+  | { type: 'SETTLE_COMMITMENT' }
   | { type: 'CONFIRM_BOOKING'; booking: DateBooking }
   | { type: 'PAY_DEPOSIT'; bookingId: string }
   | { type: 'SET_PAYMENT_SPLIT'; bookingId: string; split: PaymentSplit }
@@ -52,26 +61,35 @@ function reducer(state: AppState, action: Action): AppState {
     case 'COMPLETE_ONBOARDING':
       return { ...state, currentUser: action.user, hasCompletedOnboarding: true };
 
-    case 'START_CHAT': {
-      const archived = state.activeChatSession
-        ? [state.activeChatSession, ...state.archivedChats]
-        : state.archivedChats;
-      return { ...state, activeChatSession: action.session, archivedChats: archived };
-    }
+    case 'POST_DATE_INTENT':
+      return { ...state, dateIntents: [action.intent, ...state.dateIntents] };
 
-    case 'UPDATE_CHAT':
-      return { ...state, activeChatSession: action.session };
+    case 'CREATE_COMMITMENT':
+      return { ...state, activeCommitment: action.commitment };
 
-    case 'CONFIRM_BOOKING': {
-      const session = state.activeChatSession
-        ? { ...state.activeChatSession, state: 'dateConfirmed' as const }
-        : null;
+    case 'PLACE_YOUR_HOLD':
+      if (!state.activeCommitment) return state;
+      return { ...state, activeCommitment: { ...state.activeCommitment, yourHold: true } };
+
+    case 'PLACE_THEIR_HOLD':
+      if (!state.activeCommitment) return state;
       return {
         ...state,
-        activeChatSession: session,
+        activeCommitment: {
+          ...state.activeCommitment,
+          theirHold: true,
+          state: 'bothConfirmed',
+        },
+      };
+
+    case 'SETTLE_COMMITMENT':
+      return { ...state, activeCommitment: null };
+
+    case 'CONFIRM_BOOKING':
+      return {
+        ...state,
         upcomingBookings: [action.booking, ...state.upcomingBookings],
       };
-    }
 
     case 'PAY_DEPOSIT':
       return {
@@ -124,8 +142,11 @@ function reducer(state: AppState, action: Action): AppState {
 interface AppContextValue {
   state: AppState;
   completeOnboarding: (user: UserProfile) => void;
-  startChat: (candidate: MatchCandidate, batch: CuratedMatchBatch) => MatchChatSession;
-  updateChat: (session: MatchChatSession) => void;
+  postDateIntent: (intent: DateIntent) => void;
+  createCommitment: (candidate: MatchCandidate, experience: Experience, intent: DateIntent) => DateCommitment;
+  placeYourHold: () => void;
+  placeTheirHold: () => void;
+  settleCommitment: () => void;
   confirmBooking: (booking: DateBooking) => void;
   payDeposit: (bookingId: string) => void;
   setPaymentSplit: (bookingId: string, split: PaymentSplit) => void;
@@ -145,25 +166,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     trackEvent('onboarding_completed', state.consent);
   }, [state.consent]);
 
-  const startChat = useCallback((candidate: MatchCandidate, batch: CuratedMatchBatch): MatchChatSession => {
-    const now = new Date();
-    const session: MatchChatSession = {
-      id: Math.random().toString(36).slice(2),
-      candidate,
-      experience: batch.experience,
-      proposedTime: new Date(now.getTime() + 2 * 86_400_000),
-      startedAt: now,
-      expiresAt: new Date(now.getTime() + DECISION_WINDOW_MS),
-      messages: [],
-      state: 'countdown',
-    };
-    dispatch({ type: 'START_CHAT', session });
-    trackEvent('match_invited', state.consent);
-    return session;
+  const postDateIntent = useCallback((intent: DateIntent) => {
+    dispatch({ type: 'POST_DATE_INTENT', intent });
+    trackEvent('date_intent_posted', state.consent);
   }, [state.consent]);
 
-  const updateChat = useCallback((session: MatchChatSession) => {
-    dispatch({ type: 'UPDATE_CHAT', session });
+  const createCommitment = useCallback((
+    candidate: MatchCandidate,
+    experience: Experience,
+    intent: DateIntent,
+  ): DateCommitment => {
+    const commitment = makeDateCommitment(candidate, experience, intent);
+    dispatch({ type: 'CREATE_COMMITMENT', commitment });
+    trackEvent('commitment_created', state.consent);
+    return commitment;
+  }, [state.consent]);
+
+  const placeYourHold = useCallback(() => {
+    dispatch({ type: 'PLACE_YOUR_HOLD' });
+    trackEvent('hold_placed_you', state.consent);
+  }, [state.consent]);
+
+  const placeTheirHold = useCallback(() => {
+    dispatch({ type: 'PLACE_THEIR_HOLD' });
+  }, []);
+
+  const settleCommitment = useCallback(() => {
+    dispatch({ type: 'SETTLE_COMMITMENT' });
   }, []);
 
   const confirmBookingAction = useCallback((booking: DateBooking) => {
@@ -201,8 +230,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     <AppContext.Provider value={{
       state,
       completeOnboarding,
-      startChat,
-      updateChat,
+      postDateIntent,
+      createCommitment,
+      placeYourHold,
+      placeTheirHold,
+      settleCommitment,
       confirmBooking: confirmBookingAction,
       payDeposit,
       setPaymentSplit,

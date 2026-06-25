@@ -1,8 +1,10 @@
 import {
   UserProfile, Experience, MatchCandidate, AddOn,
-  DateBooking, MatchChatSession,
-  DECISION_WINDOW_MS,
+  DateBooking, DateIntent, DateCommitment,
+  DATE_COMMITMENT_HOLD,
 } from '../models/types';
+
+const COMMITMENT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const uuid = () => Math.random().toString(36).slice(2, 10);
 const daysFromNow = (n: number) => new Date(Date.now() + n * 86_400_000);
@@ -12,6 +14,7 @@ export const currentUser: UserProfile = {
   firstName: 'Jordan',
   age: 31,
   gender: 'Man',
+  height: '5\'10"–6\'0"',
   zipcode: '33311',
   city: 'Fort Lauderdale, FL',
   profession: 'Product Designer',
@@ -23,12 +26,15 @@ export const currentUser: UserProfile = {
   interests: ['Fine Dining', 'Live Music', 'Art & Culture'],
   lookingFor: {
     gender: ['Woman'],
-    ageRange: [26, 35],
+    ageRange: [26, 38],
     minIncome: '$50k–$100k',
     jobTypes: ['9 to 5', 'Freelance', 'Business owner'],
     maxDistance: 25,
+    minHeight: '5\'4"–5\'6"',
+    maxHeight: '5\'10"–6\'0"',
   },
   backgroundCheck: 'clear',
+  backgroundCheckNotes: 'Verified — no criminal record. Check completed via Checkr, June 2026.',
   trustedContact: { name: 'Sam Rivera', phoneNumber: '+1 (954) 555-0192' },
 };
 
@@ -83,28 +89,40 @@ export const experiences: Experience[] = [
 
 export const matchCandidates: MatchCandidate[] = [
   {
-    id: uuid(), firstName: 'Alyssa', age: 29, profession: 'Art Director',
+    id: uuid(), firstName: 'Alyssa', age: 29,
+    height: '5\'7"–5\'9"',
+    profession: 'Art Director',
     jobType: '9 to 5', income: '$100k–$200k', dressStyle: 'Smart casual',
     bio: "Loves wine bars and chef's tasting menus.",
     photos: [],
     sharedInterests: ['Fine Dining', 'Wine Bars', 'Art & Culture'],
     compatibilityScore: 0.93, distanceMiles: 8,
+    backgroundCheck: 'clear',
+    backgroundCheckNotes: 'Verified — no criminal record. Check completed via Checkr, May 2026.',
   },
   {
-    id: uuid(), firstName: 'Maya', age: 28, profession: 'Architect',
+    id: uuid(), firstName: 'Maya', age: 28,
+    height: '5\'4"–5\'6"',
+    profession: 'Architect',
     jobType: '9 to 5', income: '$100k–$200k', dressStyle: 'Business',
     bio: 'Gallery hopper with a soft spot for omakase.',
     photos: [],
     sharedInterests: ['Art & Culture', 'Fine Dining'],
     compatibilityScore: 0.88, distanceMiles: 14,
+    backgroundCheck: 'clear',
+    backgroundCheckNotes: 'Verified — no criminal record. Check completed via Checkr, April 2026.',
   },
   {
-    id: uuid(), firstName: 'Elena', age: 32, profession: 'Sommelier',
+    id: uuid(), firstName: 'Elena', age: 32,
+    height: '5\'4"–5\'6"',
+    profession: 'Sommelier',
     jobType: 'Freelance', income: '$50k–$100k', dressStyle: 'Casual',
     bio: 'Will absolutely judge the wine list — kindly.',
     photos: [],
     sharedInterests: ['Wine Bars', 'Travel'],
     compatibilityScore: 0.86, distanceMiles: 22,
+    backgroundCheck: 'clear',
+    backgroundCheckNotes: 'Verified — no criminal record. Check completed via Checkr, March 2026.',
   },
 ];
 
@@ -114,20 +132,32 @@ export const addOns: AddOn[] = [
     title: 'Hand-Tied Seasonal Bouquet',
     detail: 'Lyft driver picks up flowers en route to your date',
     price: 65, provider: '1-800-Flowers',
+    partnerCost: 58.50, t42Margin: 6.50,
   },
   {
     id: uuid(), kind: 'Transportation',
     title: 'Lyft Ride to the Venue',
-    detail: "We'll pick up your date and bring them to you",
+    detail: "Door-to-door pickup — we handle the booking & billing",
     price: 35, provider: 'Lyft',
+    partnerCost: 31.50, t42Margin: 3.50,
   },
   {
     id: uuid(), kind: 'Memories',
     title: 'Golden-Hour Photographer',
-    detail: '30 discreet minutes, 15 edited shots',
+    detail: '30 discreet minutes, 15 edited shots delivered in 48h',
     price: 120, provider: 'Table for 2',
+    partnerCost: 108, t42Margin: 12,
   },
 ];
+
+export const sampleDateIntent: DateIntent = {
+  id: uuid(),
+  zipcode: '33301',
+  city: 'Fort Lauderdale, FL',
+  scheduledFor: daysFromNow(3),
+  intentType: 'Dinner',
+  status: 'open',
+};
 
 export const upcomingBooking: DateBooking = {
   id: uuid(),
@@ -156,22 +186,24 @@ export const pastBookings: DateBooking[] = [
     theirDeposit: true,
     venueRevealed: true,
     paymentSplit: 'full',
+    totalBill: 280,
+    t42Revenue: 28,
   },
 ];
 
-export function makeChatSession(): MatchChatSession {
+export function makeDateCommitment(candidate: MatchCandidate, experience: Experience, intent: DateIntent): DateCommitment {
   const now = new Date();
   return {
     id: uuid(),
-    candidate: matchCandidates[0],
-    experience: kaitoOmakase,
-    proposedTime: daysFromNow(2),
-    startedAt: now,
-    expiresAt: new Date(now.getTime() + DECISION_WINDOW_MS),
-    messages: [
-      { id: uuid(), isFromCurrentUser: false, text: "Hey! I see we both love omakase — are you free this week?", sentAt: now },
-      { id: uuid(), isFromCurrentUser: true, text: "Friday evening works perfectly for me!", sentAt: now },
-    ],
-    state: 'countdown',
+    candidate,
+    experience,
+    intent,
+    proposedTime: intent.scheduledFor,
+    createdAt: now,
+    expiresAt: new Date(now.getTime() + COMMITMENT_WINDOW_MS),
+    state: 'pending',
+    yourHold: false,
+    theirHold: false,
   };
 }
+

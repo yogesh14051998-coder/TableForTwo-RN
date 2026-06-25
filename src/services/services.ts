@@ -1,7 +1,7 @@
 import {
-  ExperienceCategory, Experience,
-  CuratedMatchBatch, DateBooking, UserProfile, AddOn,
-  TrustedContact, ConsentSettings, DECISION_WINDOW_MS,
+  Experience,
+  CuratedMatchBatch, DateBooking, UserProfile,
+  TrustedContact, ConsentSettings, DateIntentType, DateIntent,
 } from '../models/types';
 import { experiences, matchCandidates, kaitoOmakase } from '../data/sampleData';
 
@@ -11,16 +11,18 @@ const uuid = () => Math.random().toString(36).slice(2, 10);
 // MARK: - Match Service
 
 export async function fetchCuratedBatch(
-  category: ExperienceCategory,
+  intentType: DateIntentType,
   _user: UserProfile,
+  intent: DateIntent,
 ): Promise<CuratedMatchBatch> {
   await delay(600);
+  const category = intentType === 'Open to anything' ? 'Dinner' : intentType;
   const pool = experiences.filter(e => e.category === category);
   const experience = pool[0] ?? kaitoOmakase;
   const candidates = [...matchCandidates]
     .sort((a, b) => b.compatibilityScore - a.compatibilityScore)
     .slice(0, 3);
-  return { experience, candidates };
+  return { intent, experience, candidates };
 }
 
 export function getRecommendations(_user: UserProfile): Experience[] {

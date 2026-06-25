@@ -1,7 +1,17 @@
 // MARK: - Identity
 
-export type Gender = 'Man' | 'Woman' | 'Non-Binary';
-export const ALL_GENDERS: Gender[] = ['Man', 'Woman', 'Non-Binary'];
+export type Gender =
+  | 'Man' | 'Woman' | 'Non-Binary'
+  | 'Transgender Man' | 'Transgender Woman'
+  | 'Genderqueer' | 'Prefer not to say';
+
+export const ALL_GENDERS: Gender[] = [
+  'Man', 'Woman', 'Non-Binary',
+  'Transgender Man', 'Transgender Woman',
+  'Genderqueer', 'Prefer not to say',
+];
+
+export const SHORT_GENDERS: Gender[] = ['Man', 'Woman', 'Non-Binary', 'Genderqueer', 'Prefer not to say'];
 
 export type InterestTag =
   | 'Fine Dining' | 'Adventure' | 'Live Music' | 'Wellness'
@@ -16,10 +26,10 @@ export const ALL_INTERESTS: InterestTag[] = [
 export const INTEREST_LIMIT = 5;
 
 export type IncomeRange =
-  | 'Prefer not to say' | '$50k–$100k' | '$100k–$200k'
+  | 'Prefer not to say' | 'Under $50k' | '$50k–$100k' | '$100k–$200k'
   | '$200k–$500k' | '$500k+';
 export const ALL_INCOME_RANGES: IncomeRange[] = [
-  'Prefer not to say', '$50k–$100k', '$100k–$200k', '$200k–$500k', '$500k+',
+  'Prefer not to say', 'Under $50k', '$50k–$100k', '$100k–$200k', '$200k–$500k', '$500k+',
 ];
 
 export type JobType = '9 to 5' | 'Shift work' | 'Freelance' | 'Business owner' | 'Travels frequently' | 'Remote';
@@ -30,6 +40,14 @@ export const ALL_JOB_TYPES: JobType[] = [
 export type DressStyle = 'Casual' | 'Smart casual' | 'Business' | 'Formal' | 'Streetwear';
 export const ALL_DRESS_STYLES: DressStyle[] = ['Casual', 'Smart casual', 'Business', 'Formal', 'Streetwear'];
 
+export type HeightRange =
+  | 'Under 5\'0"' | '5\'0"–5\'3"' | '5\'4"–5\'6"'
+  | '5\'7"–5\'9"' | '5\'10"–6\'0"' | '6\'1"–6\'3"' | 'Over 6\'3"' | 'Prefer not to say';
+export const ALL_HEIGHTS: HeightRange[] = [
+  'Under 5\'0"', '5\'0"–5\'3"', '5\'4"–5\'6"',
+  '5\'7"–5\'9"', '5\'10"–6\'0"', '6\'1"–6\'3"', 'Over 6\'3"', 'Prefer not to say',
+];
+
 export type BackgroundCheckStatus = 'pending' | 'clear' | 'not_started';
 
 export interface TrustedContact {
@@ -39,17 +57,20 @@ export interface TrustedContact {
 
 export interface LookingFor {
   gender: Gender[];
-  ageRange: [number, number];
+  ageRange: [number, number];  // 18–100
   minIncome: IncomeRange;
   jobTypes: JobType[];
   maxDistance: number; // miles
+  minHeight?: HeightRange;
+  maxHeight?: HeightRange;
 }
 
 export interface UserProfile {
   id: string;
   firstName: string;
-  age: number;
+  age: number;  // 18–100
   gender: Gender;
+  height: HeightRange;
   zipcode: string;
   city: string;
   profession: string;
@@ -57,22 +78,38 @@ export interface UserProfile {
   income: IncomeRange;
   dressStyle: DressStyle;
   bio: string;
-  photos: string[]; // URIs
+  photos: string[];
   interests: InterestTag[];
   lookingFor: LookingFor;
   backgroundCheck: BackgroundCheckStatus;
+  backgroundCheckNotes?: string; // visible to matches
   trustedContact?: TrustedContact;
 }
 
 export const BACKGROUND_CHECK_FEE = 50;
 
+// MARK: - Date Intent
+
+export type DateIntentType = 'Dinner' | 'Activity' | 'Drinks' | 'Open to anything';
+export const ALL_INTENT_TYPES: DateIntentType[] = ['Dinner', 'Activity', 'Drinks', 'Open to anything'];
+
+export interface DateIntent {
+  id: string;
+  zipcode: string;
+  city?: string;
+  scheduledFor: Date;
+  intentType: DateIntentType;
+  notes?: string;
+  status: 'open' | 'matched' | 'confirmed' | 'expired';
+}
+
 // MARK: - Experiences & Venues
 
 export type PartnerProvider =
   | 'OpenTable' | 'inKind' | 'Airbnb Experiences'
-  | 'Groupon' | 'Lyft' | '1-800-Flowers' | 'Table for 2';
+  | 'Groupon' | 'Lyft' | 'Uber' | '1-800-Flowers' | 'Table for 2';
 
-export const PARTNER_COMMISSION = 0.10; // 10%
+export const PARTNER_COMMISSION = 0.10; // 10% kept by T42
 
 export type ExperienceCategory = 'Dinner' | 'Activity' | 'Drinks' | 'Custom';
 export const ALL_CATEGORIES: ExperienceCategory[] = ['Dinner', 'Activity', 'Drinks', 'Custom'];
@@ -103,6 +140,7 @@ export interface MatchCandidate {
   id: string;
   firstName: string;
   age: number;
+  height: HeightRange;
   profession: string;
   jobType: JobType;
   income: IncomeRange;
@@ -112,35 +150,33 @@ export interface MatchCandidate {
   sharedInterests: InterestTag[];
   compatibilityScore: number;
   distanceMiles: number;
+  backgroundCheck: BackgroundCheckStatus;
+  backgroundCheckNotes?: string;
 }
 
 export interface CuratedMatchBatch {
+  intent: DateIntent;
   experience: Experience;
   candidates: MatchCandidate[];
 }
 
-// MARK: - Chat
+// MARK: - Commitment (replaces Chat)
 
-export interface ChatMessage {
-  id: string;
-  isFromCurrentUser: boolean;
-  text: string;
-  sentAt: Date;
-}
+export const DATE_COMMITMENT_HOLD = 50; // $50 hold per person
 
-export type ChatState = 'countdown' | 'dateConfirmed' | 'expired';
+export type CommitmentState = 'pending' | 'bothConfirmed' | 'expired' | 'cancelled';
 
-export const DECISION_WINDOW_MS = 30 * 60 * 1000; // 30 minutes
-
-export interface MatchChatSession {
+export interface DateCommitment {
   id: string;
   candidate: MatchCandidate;
   experience: Experience;
+  intent: DateIntent;
   proposedTime: Date;
-  startedAt: Date;
-  expiresAt: Date;
-  messages: ChatMessage[];
-  state: ChatState;
+  createdAt: Date;
+  expiresAt: Date;  // 24-hour window to accept
+  state: CommitmentState;
+  yourHold: boolean;
+  theirHold: boolean;
 }
 
 // MARK: - Booking, deposits & add-ons
@@ -162,6 +198,8 @@ export interface AddOn {
   detail: string;
   price: number;
   provider: PartnerProvider;
+  partnerCost: number;   // what T42 pays partner
+  t42Margin: number;     // price - partnerCost (10%)
 }
 
 export type BookingStatus = 'awaitingDeposit' | 'depositPaid' | 'confirmed' | 'live' | 'completed' | 'cancelled';
@@ -180,6 +218,8 @@ export interface DateBooking {
   theirDeposit: boolean;
   venueRevealed: boolean;
   paymentSplit: PaymentSplit;
+  totalBill?: number;     // set during live date
+  t42Revenue?: number;    // 10% of totalBill
 }
 
 // MARK: - Feedback
@@ -203,14 +243,14 @@ export interface PostDateFeedback {
   wouldSeeAgain?: YesNoMaybe;
 }
 
-// MARK: - Monetization
+// MARK: - Monetization (simplified)
 
 export type SubscriptionTier = 'Free' | 'Silver' | 'Gold' | 'Diamond';
 export const PAID_TIERS: SubscriptionTier[] = ['Silver', 'Gold', 'Diamond'];
 
 export const TIER_INFO: Record<SubscriptionTier, { price: number; perks: string[]; matchesPerBatch: number }> = {
   Free:    { price: 0,     perks: ['Browse experiences', '1 curated batch per week'], matchesPerBatch: 1 },
-  Silver:  { price: 29.99, perks: ['3 curated matches per batch', 'Standard reservations', 'Chat window'], matchesPerBatch: 3 },
+  Silver:  { price: 29.99, perks: ['3 curated matches per batch', 'Standard reservations', 'Priority matching'], matchesPerBatch: 3 },
   Gold:    { price: 49.99, perks: ['5 curated matches per batch', 'Priority matching', '1 free add-on monthly', 'Premium venues'], matchesPerBatch: 5 },
   Diamond: { price: 99.99, perks: ['Unlimited matches', 'Concierge planning', 'VIP access', 'Priority support', 'Member events'], matchesPerBatch: 10 },
 };
