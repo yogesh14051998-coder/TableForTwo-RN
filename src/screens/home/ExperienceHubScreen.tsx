@@ -1,20 +1,32 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { View, Text, ScrollView, Animated, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
-import { Card, MatchAvatar } from '../../components/SharedComponents';
+import { Card, MatchAvatar, AnimatedCard } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
+import { useScreenAnimation, useStaggerAnimation } from '../../hooks/useScreenAnimation';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 import type { DateCommitment, DateBooking } from '../../models/types';
 
 type Nav = NativeStackNavigationProp<MainStackParams>;
 
+const HOW_STEPS = [
+  { icon: 'location-outline' as const, title: 'Post your intent', body: 'Tell us your zip code, date, and vibe. No destination needed.' },
+  { icon: 'sparkles' as const, title: 'AI picks 2–3 matches', body: 'We surface people who meet your height, income, and interest criteria.' },
+  { icon: 'card-outline' as const, title: '$50 hold on both cards', body: 'Mutual accountability. No ghosting, no wasted evenings.' },
+  { icon: 'compass-outline' as const, title: 'We handle everything', body: 'Lyft, OpenTable, flowers — all booked. You just show up.' },
+];
+
 export default function ExperienceHubScreen() {
   const nav = useNavigation<Nav>();
   const { state } = useApp();
+  const { animStyle } = useScreenAnimation();
+  const stepAnims = useStaggerAnimation(HOW_STEPS.length, 70);
+
+  const ctaScale = useRef(new Animated.Value(1)).current;
 
   const timeGreeting = (() => {
     const h = new Date().getHours();
@@ -26,11 +38,16 @@ export default function ExperienceHubScreen() {
   const hasActiveCommitment = !!state.activeCommitment;
   const upcomingDate = state.upcomingBookings.find(b => b.status === 'confirmed');
 
+  const onCtaPressIn = () =>
+    Animated.spring(ctaScale, { toValue: 0.97, useNativeDriver: true, tension: 300, friction: 10 }).start();
+  const onCtaPressOut = () =>
+    Animated.spring(ctaScale, { toValue: 1, useNativeDriver: true, tension: 300, friction: 10 }).start();
+
   return (
     <ScrollView style={s.root} contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
 
       {/* Greeting */}
-      <View>
+      <Animated.View style={animStyle}>
         <Text style={[Fonts.displayMedium, { color: T42.textPrimary }]}>
           {timeGreeting},{'\n'}{state.currentUser.firstName}
         </Text>
@@ -39,7 +56,7 @@ export default function ExperienceHubScreen() {
             ? 'You have an active date commitment.'
             : 'No swiping. No messaging. Just great dates.'}
         </Text>
-      </View>
+      </Animated.View>
 
       {/* Active commitment widget */}
       {state.activeCommitment && (
@@ -55,47 +72,45 @@ export default function ExperienceHubScreen() {
       )}
 
       {/* Primary hero CTA */}
-      <TouchableOpacity
+      <Pressable
         onPress={() => nav.navigate('DateIntent')}
-        activeOpacity={0.88}
+        onPressIn={onCtaPressIn}
+        onPressOut={onCtaPressOut}
       >
-        <LinearGradient
-          colors={[T42.gold, T42.goldDeep]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={s.heroCta}
-        >
-          <View style={s.heroCtaInner}>
-            <View>
-              <Text style={[Fonts.displaySmall, { color: T42.onGold }]}>Plan a date</Text>
-              <Text style={[Fonts.caption, { color: T42.onGold + 'CC', marginTop: 3 }]}>
-                Tell us when & where. We'll find your match.
-              </Text>
-            </View>
-            <View style={s.heroCtaArrow}>
-              <Ionicons name="arrow-forward" size={22} color={T42.onGold} />
-            </View>
-          </View>
-
-          <View style={s.heroPills}>
-            {['No swiping', 'AI curated', '$50 hold accountability'].map(pill => (
-              <View key={pill} style={s.heroPill}>
-                <Text style={[Fonts.caption2, { color: T42.onGold + 'CC' }]}>{pill}</Text>
+        <Animated.View style={{ transform: [{ scale: ctaScale }] }}>
+          <LinearGradient
+            colors={[T42.gold, T42.goldDeep]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.heroCta}
+          >
+            <View style={s.heroCtaInner}>
+              <View>
+                <Text style={[Fonts.displaySmall, { color: T42.onGold }]}>Plan a date</Text>
+                <Text style={[Fonts.caption, { color: T42.onGold + 'CC', marginTop: 3 }]}>
+                  Tell us when & where. We'll find your match.
+                </Text>
               </View>
-            ))}
-          </View>
-        </LinearGradient>
-      </TouchableOpacity>
+              <View style={s.heroCtaArrow}>
+                <Ionicons name="arrow-forward" size={22} color={T42.onGold} />
+              </View>
+            </View>
 
-      {/* How it works */}
+            <View style={s.heroPills}>
+              {['No swiping', 'AI curated', '$50 hold accountability'].map(pill => (
+                <View key={pill} style={s.heroPill}>
+                  <Text style={[Fonts.caption2, { color: T42.onGold + 'CC' }]}>{pill}</Text>
+                </View>
+              ))}
+            </View>
+          </LinearGradient>
+        </Animated.View>
+      </Pressable>
+
+      {/* How it works — staggered entrance */}
       <View style={s.howItWorks}>
         <Text style={[Fonts.subheadline, { color: T42.textSecondary, marginBottom: 14 }]}>How it works</Text>
-        {[
-          { icon: 'location-outline' as const, title: 'Post your intent', body: 'Tell us your zip code, date, and vibe. No destination needed.' },
-          { icon: 'sparkles' as const, title: 'AI picks 2–3 matches', body: 'We surface people who meet your height, income, and interest criteria.' },
-          { icon: 'card-outline' as const, title: '$50 hold on both cards', body: 'Mutual accountability. No ghosting, no wasted evenings.' },
-          { icon: 'compass-outline' as const, title: 'We handle everything', body: 'Lyft, OpenTable, flowers — all booked. You just show up.' },
-        ].map((step, i) => (
-          <View key={step.title} style={s.howStep}>
+        {HOW_STEPS.map((step, i) => (
+          <Animated.View key={step.title} style={[s.howStep, stepAnims[i]]}>
             <View style={s.howStepNum}>
               <Text style={[Fonts.caption2, { color: T42.onGold, fontWeight: '700' }]}>{i + 1}</Text>
             </View>
@@ -103,7 +118,7 @@ export default function ExperienceHubScreen() {
               <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>{step.title}</Text>
               <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 3, lineHeight: 17 }]}>{step.body}</Text>
             </View>
-          </View>
+          </Animated.View>
         ))}
       </View>
 
@@ -112,28 +127,28 @@ export default function ExperienceHubScreen() {
         <View style={{ gap: 10 }}>
           <Text style={[Fonts.subheadline, { color: T42.textSecondary }]}>Past dates</Text>
           {state.pastBookings.slice(0, 3).map(booking => (
-            <TouchableOpacity key={booking.id}
-              onPress={() => nav.navigate('Feedback', { booking })} activeOpacity={0.7}>
-              <Card>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  <MatchAvatar name={booking.companion.firstName} size={46} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
-                      {booking.companion.firstName}
-                    </Text>
-                    <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 2 }]}>
-                      {booking.experience.venueName} · {booking.scheduledFor.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </Text>
-                  </View>
-                  {booking.paymentSplit === 'full' && (
-                    <View style={s.dateDoneChip}>
-                      <Ionicons name="heart" size={11} color={T42.success} />
-                      <Text style={[Fonts.caption2, { color: T42.success, marginLeft: 4 }]}>Went well</Text>
-                    </View>
-                  )}
+            <AnimatedCard
+              key={booking.id}
+              onPress={() => nav.navigate('Feedback', { booking })}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <MatchAvatar name={booking.companion.firstName} size={46} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[Fonts.headline, { color: T42.textPrimary }]}>
+                    {booking.companion.firstName}
+                  </Text>
+                  <Text style={[Fonts.caption, { color: T42.textSecondary, marginTop: 2 }]}>
+                    {booking.experience.venueName} · {booking.scheduledFor.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                  </Text>
                 </View>
-              </Card>
-            </TouchableOpacity>
+                {booking.paymentSplit === 'full' && (
+                  <View style={s.dateDoneChip}>
+                    <Ionicons name="heart" size={11} color={T42.success} />
+                    <Text style={[Fonts.caption2, { color: T42.success, marginLeft: 4 }]}>Went well</Text>
+                  </View>
+                )}
+              </View>
+            </AnimatedCard>
           ))}
         </View>
       )}
@@ -146,46 +161,54 @@ function CommitmentWidget({ commitment, onContinue }: { commitment: DateCommitme
   const bothHeld = commitment.yourHold && commitment.theirHold;
   const msLeft = commitment.expiresAt.getTime() - Date.now();
   const hoursLeft = Math.max(0, Math.floor(msLeft / 3_600_000));
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () =>
+    Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, tension: 280, friction: 10 }).start();
+  const onPressOut = () =>
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 280, friction: 10 }).start();
 
   return (
-    <TouchableOpacity onPress={onContinue} activeOpacity={0.85}>
-      <LinearGradient
-        colors={bothHeld ? [T42.success + '22', T42.background] : [T42.gold + '1A', T42.background]}
-        style={s.commitmentWidget}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Ionicons
-              name={bothHeld ? 'heart' : 'time-outline'}
-              size={18}
-              color={bothHeld ? T42.success : T42.gold}
-            />
-            <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>
-              {bothHeld ? 'Date confirmed!' : 'Commitment pending'}
-            </Text>
+    <Pressable onPress={onContinue} onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+        <LinearGradient
+          colors={bothHeld ? [T42.success + '22', T42.background] : [T42.gold + '1A', T42.background]}
+          style={s.commitmentWidget}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Ionicons
+                name={bothHeld ? 'heart' : 'time-outline'}
+                size={18}
+                color={bothHeld ? T42.success : T42.gold}
+              />
+              <Text style={[Fonts.subheadline, { color: T42.textPrimary }]}>
+                {bothHeld ? 'Date confirmed!' : 'Commitment pending'}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={T42.textSecondary} />
           </View>
-          <Ionicons name="chevron-forward" size={16} color={T42.textSecondary} />
-        </View>
 
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-          <MatchAvatar name={commitment.candidate.firstName} size={36} />
-          <View style={{ flex: 1 }}>
-            <Text style={[Fonts.caption, { color: T42.textPrimary }]}>
-              {commitment.candidate.firstName} · {commitment.intent.intentType}
-            </Text>
-            <Text style={[Fonts.caption2, { color: T42.textSecondary, marginTop: 2 }]}>
-              {commitment.proposedTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
-              {' · '}
-              {bothHeld ? 'Venue revealed' : `${hoursLeft}h left to confirm`}
-            </Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            <MatchAvatar name={commitment.candidate.firstName} size={36} />
+            <View style={{ flex: 1 }}>
+              <Text style={[Fonts.caption, { color: T42.textPrimary }]}>
+                {commitment.candidate.firstName} · {commitment.intent.intentType}
+              </Text>
+              <Text style={[Fonts.caption2, { color: T42.textSecondary, marginTop: 2 }]}>
+                {commitment.proposedTime.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                {' · '}
+                {bothHeld ? 'Venue revealed' : `${hoursLeft}h left to confirm`}
+              </Text>
+            </View>
+            <View style={{ alignItems: 'flex-end', gap: 4 }}>
+              <HoldDot placed={commitment.yourHold} label="You" />
+              <HoldDot placed={commitment.theirHold} label={commitment.candidate.firstName} />
+            </View>
           </View>
-          <View style={{ alignItems: 'flex-end', gap: 4 }}>
-            <HoldDot placed={commitment.yourHold} label="You" />
-            <HoldDot placed={commitment.theirHold} label={commitment.candidate.firstName} />
-          </View>
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
+        </LinearGradient>
+      </Animated.View>
+    </Pressable>
   );
 }
 

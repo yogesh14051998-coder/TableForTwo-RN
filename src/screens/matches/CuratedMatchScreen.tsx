@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, ScrollView, Animated, Pressable, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -7,6 +7,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { T42, Fonts } from '../../theme/theme';
 import { GoldButton, Card } from '../../components/SharedComponents';
 import { useApp } from '../../context/AppContext';
+import { useScreenAnimation, useStaggerAnimation } from '../../hooks/useScreenAnimation';
 import type { MainStackParams } from '../../navigation/RootNavigator';
 import type { MatchCandidate, CuratedMatchBatch } from '../../models/types';
 
@@ -25,6 +26,9 @@ export default function CuratedMatchScreen() {
   const batch: CuratedMatchBatch = route.params.batch;
   const [selected, setSelected] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+
+  const { animStyle } = useScreenAnimation();
+  const cardAnims = useStaggerAnimation(batch.candidates.length, 100);
 
   const handleCommit = () => {
     const candidate = batch.candidates.find(c => c.id === selected);
@@ -55,33 +59,36 @@ export default function CuratedMatchScreen() {
   return (
     <View style={s.root}>
       <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+
         {/* Header */}
-        <Text style={[Fonts.displayMedium, { color: T42.textPrimary, textAlign: 'center' }]}>
-          Your matches
-        </Text>
-        <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 6 }]}>
-          {batch.candidates.length} people matched your criteria for this date
-        </Text>
+        <Animated.View style={animStyle}>
+          <Text style={[Fonts.displayMedium, { color: T42.textPrimary, textAlign: 'center' }]}>
+            Your matches
+          </Text>
+          <Text style={[Fonts.body, { color: T42.textSecondary, textAlign: 'center', marginTop: 6 }]}>
+            {batch.candidates.length} people matched your criteria for this date
+          </Text>
+        </Animated.View>
 
         {/* Intent context bar */}
-        <View style={s.contextBar}>
+        <Animated.View style={[s.contextBar, animStyle]}>
           <Ionicons name="location-outline" size={14} color={T42.gold} />
           <Text style={[Fonts.caption, { color: T42.gold, marginLeft: 6 }]}>
             {batch.intent.intentType} · {batch.intent.zipcode} ·{' '}
             {batch.intent.scheduledFor.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
           </Text>
-        </View>
+        </Animated.View>
 
-        {/* Match cards */}
+        {/* Match cards — staggered entrance */}
         {batch.candidates.map((candidate, i) => (
-          <TouchableOpacity key={candidate.id} activeOpacity={0.85}
-            onPress={() => setSelected(candidate.id === selected ? null : candidate.id)}>
-            <MatchCard
+          <Animated.View key={candidate.id} style={cardAnims[i] ?? {}}>
+            <MatchCardPressable
               candidate={candidate}
               isSelected={selected === candidate.id}
               colors={AVATAR_COLORS[i % AVATAR_COLORS.length]}
+              onPress={() => setSelected(candidate.id === selected ? null : candidate.id)}
             />
-          </TouchableOpacity>
+          </Animated.View>
         ))}
 
         {/* AI note */}
@@ -118,80 +125,105 @@ export default function CuratedMatchScreen() {
         )}
         <GoldButton
           label="Commit to This Date"
-          onPress={handleCommit} disabled={!selected} />
+          onPress={handleCommit}
+          disabled={!selected}
+        />
       </View>
     </View>
   );
 }
 
-function MatchCard({ candidate, isSelected, colors }: {
-  candidate: MatchCandidate; isSelected: boolean; colors: [string, string];
+function MatchCardPressable({ candidate, isSelected, colors, onPress }: {
+  candidate: MatchCandidate;
+  isSelected: boolean;
+  colors: [string, string];
+  onPress: () => void;
 }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const onPressIn = () =>
+    Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, tension: 280, friction: 10 }).start();
+  const onPressOut = () =>
+    Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 280, friction: 10 }).start();
+
   return (
-    <Card style={[isSelected && { borderColor: T42.gold, borderWidth: 2 }]}>
-      <View style={{ flexDirection: 'row', gap: 14 }}>
-        <LinearGradient colors={colors} style={s.avatar}>
-          <Text style={s.avatarText}>{candidate.firstName[0]}</Text>
-        </LinearGradient>
+    <Pressable onPress={onPress} onPressIn={onPressIn} onPressOut={onPressOut}>
+      <Animated.View
+        style={[
+          s.card,
+          isSelected && { borderColor: T42.gold, borderWidth: 2 },
+          { transform: [{ scale: scaleAnim }] },
+        ]}
+      >
+        <View style={{ flexDirection: 'row', gap: 14 }}>
+          <LinearGradient colors={colors} style={s.avatar}>
+            <Text style={s.avatarText}>{candidate.firstName[0]}</Text>
+          </LinearGradient>
 
-        <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={[Fonts.headline, { color: T42.textPrimary, fontSize: 19 }]}>
-              {candidate.firstName}, {candidate.age}
-            </Text>
-            <View style={s.compatBadge}>
-              <Ionicons name="sparkles" size={11} color={T42.gold} />
-              <Text style={[Fonts.caption2, { color: T42.gold, marginLeft: 3 }]}>
-                {Math.round(candidate.compatibilityScore * 100)}% match
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={[Fonts.headline, { color: T42.textPrimary, fontSize: 19 }]}>
+                {candidate.firstName}, {candidate.age}
               </Text>
-            </View>
-          </View>
-
-          {/* Key stats row */}
-          <View style={s.statsRow}>
-            <StatPill icon="resize-outline" label={candidate.height} />
-            <StatPill icon="cash-outline" label={candidate.income} />
-            <StatPill icon="location-outline" label={`${candidate.distanceMiles} mi`} />
-          </View>
-
-          {/* Background check badge */}
-          {candidate.backgroundCheck === 'clear' && (
-            <View style={s.bgCheckBadge}>
-              <Ionicons name="shield-checkmark" size={13} color={T42.success} />
-              <Text style={[Fonts.caption2, { color: T42.success, marginLeft: 5 }]}>Background Verified</Text>
-              {candidate.backgroundCheckNotes && (
-                <Text style={[Fonts.caption2, { color: T42.textSecondary, marginLeft: 4 }]}>· {candidate.backgroundCheckNotes.split('.')[0]}</Text>
-              )}
-            </View>
-          )}
-
-          <Text style={[Fonts.body, { color: T42.textPrimary, marginTop: 8, fontStyle: 'italic', lineHeight: 20 }]} numberOfLines={2}>
-            "{candidate.bio}"
-          </Text>
-
-          <View style={s.interestRow}>
-            {candidate.sharedInterests.slice(0, 3).map(tag => (
-              <View key={tag} style={s.interestChip}>
-                <Text style={[Fonts.caption2, { color: T42.purple }]}>{tag}</Text>
+              <View style={s.compatBadge}>
+                <Ionicons name="sparkles" size={11} color={T42.gold} />
+                <Text style={[Fonts.caption2, { color: T42.gold, marginLeft: 3 }]}>
+                  {Math.round(candidate.compatibilityScore * 100)}% match
+                </Text>
               </View>
-            ))}
-          </View>
+            </View>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
-            <Ionicons name="briefcase-outline" size={13} color={T42.textSecondary} />
-            <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{candidate.profession} · {candidate.jobType}</Text>
+            <View style={s.statsRow}>
+              <StatPill icon="resize-outline" label={candidate.height} />
+              <StatPill icon="cash-outline" label={candidate.income} />
+              <StatPill icon="location-outline" label={`${candidate.distanceMiles} mi`} />
+            </View>
+
+            {candidate.backgroundCheck === 'clear' && (
+              <View style={s.bgCheckBadge}>
+                <Ionicons name="shield-checkmark" size={13} color={T42.success} />
+                <Text style={[Fonts.caption2, { color: T42.success, marginLeft: 5 }]}>Background Verified</Text>
+                {candidate.backgroundCheckNotes && (
+                  <Text style={[Fonts.caption2, { color: T42.textSecondary, marginLeft: 4 }]}>
+                    · {candidate.backgroundCheckNotes.split('.')[0]}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <Text style={[Fonts.body, { color: T42.textPrimary, marginTop: 8, fontStyle: 'italic', lineHeight: 20 }]} numberOfLines={2}>
+              "{candidate.bio}"
+            </Text>
+
+            <View style={s.interestRow}>
+              {candidate.sharedInterests.slice(0, 3).map(tag => (
+                <View key={tag} style={s.interestChip}>
+                  <Text style={[Fonts.caption2, { color: T42.purple }]}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+              <Ionicons name="briefcase-outline" size={13} color={T42.textSecondary} />
+              <Text style={[Fonts.caption, { color: T42.textSecondary }]}>{candidate.profession} · {candidate.jobType}</Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {isSelected && (
-        <LinearGradient colors={[T42.gold, T42.goldDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={s.selectedBanner}>
-          <Ionicons name="checkmark-circle" size={15} color={T42.onGold} />
-          <Text style={[Fonts.caption2, { color: T42.onGold, fontWeight: '700', marginLeft: 5 }]}>SELECTED — $50 HOLD WILL BE PLACED</Text>
-        </LinearGradient>
-      )}
-    </Card>
+        {isSelected && (
+          <LinearGradient
+            colors={[T42.gold, T42.goldDeep]}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={s.selectedBanner}
+          >
+            <Ionicons name="checkmark-circle" size={15} color={T42.onGold} />
+            <Text style={[Fonts.caption2, { color: T42.onGold, fontWeight: '700', marginLeft: 5 }]}>
+              SELECTED — $50 HOLD WILL BE PLACED
+            </Text>
+          </LinearGradient>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 }
 
@@ -212,6 +244,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: 50, backgroundColor: T42.gold + '16',
     borderWidth: 1, borderColor: T42.gold + '30',
+  },
+  card: {
+    padding: 16, borderRadius: 20,
+    backgroundColor: T42.surface,
+    borderWidth: 1, borderColor: T42.stroke,
   },
   confirmingRing: {
     width: 90, height: 90, borderRadius: 45,
